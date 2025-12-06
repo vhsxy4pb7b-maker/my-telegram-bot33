@@ -1,0 +1,86 @@
+# 自动回复配置
+auto_reply:
+  enabled: true
+  default_language: "zh-CN"
+  response_delay_seconds: 2
+
+# 资料收集配置
+data_collection:
+  # 需要收集的字段
+  required_fields:
+    - name
+    - email
+    - phone
+    - inquiry_type
+    - message_content
+  
+  # 可选字段
+  optional_fields:
+    - budget
+    - timeline
+    - location
+    - company_name
+
+# 过滤规则配置
+filtering:
+  # 关键词过滤
+  keyword_filter:
+    enabled: true
+    spam_keywords:
+      - "垃圾"
+      - "广告"
+      - "spam"
+    block_keywords:
+      - "诈骗"
+      - "scam"
+  
+  # 情感分析过滤
+  sentiment_filter:
+    enabled: true
+    priority_negative: true  # 负面情绪优先处理
+  
+  # 优先级判断
+  priority_rules:
+    - condition: "包含紧急关键词"
+      keywords: ["紧急", "urgent", "急"]
+      priority: "high"
+    - condition: "包含购买意向"
+      keywords: ["价格", "购买", "buy", "price"]
+      priority: "medium"
+    - condition: "默认"
+      priority: "low"
+
+# AI 回复模板
+ai_templates:
+  greeting: "您好！感谢您的咨询，我是AI智能客服，很高兴为您服务。"
+  collecting_info: "为了更好地帮助您，请提供以下信息：姓名、联系方式、具体需求。"
+  processing: "正在为您处理，请稍候..."
+  fallback: "抱歉，我没有完全理解您的问题。能否详细描述一下您的需求？"
+
+# Telegram 通知配置
+telegram:
+  notification_format: "markdown"
+  include_customer_info: true
+  include_message_preview: true
+  max_preview_length: 200
+
+# ManyChat/Botcake 配置
+integrations:
+  manychat:
+    enabled: true
+    auto_sync: true
+  botcake:
+    enabled: true
+    auto_sync: true
+
+# 页面设置 - 为每个页面单独配置自动回复
+# 如果不配置，则使用全局 auto_reply.enabled 设置
+# page_settings:
+#   "1234567890123456":  # Facebook页面ID
+#     auto_reply_enabled: true  # 是否启用自动回复
+#     name: "我的业务页面"  # 可选，页面名称（便于识别）
+#   "9876543210987654":  # 另一个页面ID
+#     auto_reply_enabled: false  # 禁用该页面的自动回复
+#     name: "测试页面"
+
+

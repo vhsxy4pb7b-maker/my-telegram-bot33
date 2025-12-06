@@ -1,0 +1,51 @@
+# Railway 环境变量配置清单
+# 复制这些变量到 Railway 项目 → Variables
+
+# ============================================
+# 必需配置
+# ============================================
+
+# Facebook 配置
+FACEBOOK_APP_ID=你的Facebook应用ID
+FACEBOOK_APP_SECRET=你的Facebook应用密钥
+FACEBOOK_ACCESS_TOKEN=你的Facebook访问令牌
+FACEBOOK_VERIFY_TOKEN=你的Facebook验证令牌
+
+# OpenAI 配置
+OPENAI_API_KEY=你的OpenAI API密钥
+OPENAI_MODEL=gpt-4
+OPENAI_TEMPERATURE=0.7
+
+# Telegram 配置
+TELEGRAM_BOT_TOKEN=你的Telegram Bot令牌
+TELEGRAM_CHAT_ID=你的Telegram聊天ID
+
+# 安全配置
+SECRET_KEY=YB-Y7XHm6JuFqMl1fJOuFRLgUEJZPG2x5lQnVC_tJ2U
+ALGORITHM=HS256
+
+# 服务器配置（Railway 自动设置，但可以手动添加）
+HOST=0.0.0.0
+PORT=$PORT
+DEBUG=false
+
+# ============================================
+# 可选配置
+# ============================================
+
+# Instagram 配置（如果使用）
+# INSTAGRAM_ACCESS_TOKEN=你的Instagram访问令牌
+# INSTAGRAM_VERIFY_TOKEN=你的Instagram验证令牌
+# INSTAGRAM_USER_ID=你的Instagram用户ID
+
+# 第三方集成（如果使用）
+# MANYCHAT_API_KEY=你的ManyChat API密钥
+# BOTCAKE_API_KEY=你的Botcake API密钥
+
+# ============================================
+# 注意：
+# 1. DATABASE_URL 由 Railway PostgreSQL 自动提供，无需手动设置
+# 2. 将所有 "你的XXX" 替换为实际值
+# 3. SECRET_KEY 已生成，可以直接使用
+# ============================================
+

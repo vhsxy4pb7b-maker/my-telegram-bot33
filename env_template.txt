@@ -1,0 +1,37 @@
+# Database Configuration
+DATABASE_URL=postgresql://user:password@localhost:5432/facebook_customer_service
+DATABASE_ECHO=false
+
+# Facebook API Configuration
+FACEBOOK_APP_ID=your_facebook_app_id
+FACEBOOK_APP_SECRET=your_facebook_app_secret
+FACEBOOK_ACCESS_TOKEN=your_facebook_access_token
+FACEBOOK_VERIFY_TOKEN=your_webhook_verify_token
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4
+OPENAI_TEMPERATURE=0.7
+
+# Telegram Bot Configuration
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHAT_ID=your_telegram_chat_id
+
+# ManyChat Configuration
+MANYCHAT_API_KEY=your_manychat_api_key
+MANYCHAT_API_URL=https://api.manychat.com
+
+# Botcake Configuration
+BOTCAKE_API_KEY=your_botcake_api_key
+BOTCAKE_API_URL=https://api.botcake.com
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=8000
+DEBUG=false
+
+# Security
+SECRET_KEY=your_secret_key_here
+ALGORITHM=HS256
+
+

@@ -1,0 +1,202 @@
+"""统计数据API接口"""
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from src.database.database import get_db
+from src.statistics.tracker import StatisticsTracker
+from datetime import date, datetime
+from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/statistics", tags=["statistics"])
+
+
+@router.get("/daily")
+async def get_daily_statistics(
+    target_date: Optional[str] = Query(None, description="日期，格式：YYYY-MM-DD，默认为今天"),
+    db: Session = Depends(get_db)
+):
+    """
+    获取每日统计数据
+    
+    返回：
+    - 总接待客户数
+    - 总消息数
+    - 发送的群组邀请数
+    - 成功引流数
+    - 引流转化率
+    - 总开单数
+    - 成功开单数
+    - 开单转化率
+    - 高频问题
+    """
+    try:
+        tracker = StatisticsTracker(db)
+        
+        if target_date:
+            try:
+                target = datetime.strptime(target_date, "%Y-%m-%d").date()
+            except ValueError:
+                return {"error": "日期格式错误，请使用 YYYY-MM-DD 格式"}
+        else:
+            target = None
+        
+        stats = tracker.get_daily_statistics(target)
+        return {"success": True, "data": stats}
+    
+    except Exception as e:
+        logger.error(f"Error getting daily statistics: {str(e)}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/frequent-questions")
+async def get_frequent_questions(
+    limit: int = Query(20, description="返回的问题数量，默认20"),
+    db: Session = Depends(get_db)
+):
+    """
+    获取高频问题列表
+    
+    返回按出现次数排序的问题列表
+    """
+    try:
+        tracker = StatisticsTracker(db)
+        questions = tracker.get_frequent_questions(limit)
+        return {"success": True, "data": questions, "count": len(questions)}
+    
+    except Exception as e:
+        logger.error(f"Error getting frequent questions: {str(e)}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/mark-joined-group")
+async def mark_joined_group(
+    customer_id: int = Query(..., description="客户ID"),
+    db: Session = Depends(get_db)
+):
+    """
+    标记客户已加入群组（手动标记）
+    
+    用于在Telegram群组中确认客户已加入时调用
+    """
+    try:
+        tracker = StatisticsTracker(db)
+        success = tracker.mark_joined_group(customer_id)
+        
+        if success:
+            return {"success": True, "message": f"客户 {customer_id} 已标记为加入群组"}
+        else:
+            return {"success": False, "message": "未找到该客户今天的交互记录"}
+    
+    except Exception as e:
+        logger.error(f"Error marking joined group: {str(e)}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/mark-order-created")
+async def mark_order_created(
+    customer_id: int = Query(..., description="客户ID"),
+    db: Session = Depends(get_db)
+):
+    """
+    标记客户已开单（手动标记）
+    
+    用于确认客户已成功开单时调用
+    """
+    try:
+        tracker = StatisticsTracker(db)
+        success = tracker.mark_order_created(customer_id)
+        
+        if success:
+            return {"success": True, "message": f"客户 {customer_id} 已标记为开单"}
+        else:
+            return {"success": False, "message": "未找到该客户今天的交互记录"}
+    
+    except Exception as e:
+        logger.error(f"Error marking order created: {str(e)}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/summary")
+async def get_statistics_summary(
+    start_date: Optional[str] = Query(None, description="开始日期，格式：YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="结束日期，格式：YYYY-MM-DD"),
+    db: Session = Depends(get_db)
+):
+    """
+    获取统计摘要（多日汇总）
+    
+    如果不提供日期，返回最近7天的汇总
+    """
+    try:
+        from datetime import timedelta
+        from sqlalchemy import func as sql_func
+        from src.database.statistics_models import DailyStatistics
+        
+        tracker = StatisticsTracker(db)
+        
+        if start_date and end_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            except ValueError:
+                return {"error": "日期格式错误，请使用 YYYY-MM-DD 格式"}
+        else:
+            # 默认最近7天
+            end = date.today()
+            start = end - timedelta(days=6)
+        
+        # 查询日期范围内的统计数据
+        stats_list = db.query(DailyStatistics)\
+            .filter(
+                DailyStatistics.date >= start,
+                DailyStatistics.date <= end
+            )\
+            .order_by(DailyStatistics.date)\
+            .all()
+        
+        # 汇总数据
+        summary = {
+            "period": {
+                "start_date": start.isoformat(),
+                "end_date": end.isoformat(),
+                "days": (end - start).days + 1
+            },
+            "total_customers": sum(s.total_customers for s in stats_list),
+            "total_messages": sum(s.total_messages for s in stats_list),
+            "total_invitations": sum(s.group_invitations_sent for s in stats_list),
+            "total_leads": sum(s.successful_leads for s in stats_list),
+            "total_orders": sum(s.total_orders for s in stats_list),
+            "successful_orders": sum(s.successful_orders for s in stats_list),
+            "daily_details": [
+                {
+                    "date": s.date.isoformat(),
+                    "customers": s.total_customers,
+                    "messages": s.total_messages,
+                    "leads": s.successful_leads,
+                    "orders": s.successful_orders,
+                    "lead_conversion_rate": s.lead_conversion_rate,
+                    "order_conversion_rate": s.order_conversion_rate
+                }
+                for s in stats_list
+            ]
+        }
+        
+        # 计算总体转化率
+        if summary["total_invitations"] > 0:
+            summary["overall_lead_rate"] = f"{(summary['total_leads'] / summary['total_invitations'] * 100):.1f}%"
+        else:
+            summary["overall_lead_rate"] = "0%"
+        
+        if summary["total_leads"] > 0:
+            summary["overall_order_rate"] = f"{(summary['successful_orders'] / summary['total_leads'] * 100):.1f}%"
+        else:
+            summary["overall_order_rate"] = "0%"
+        
+        return {"success": True, "data": summary}
+    
+    except Exception as e:
+        logger.error(f"Error getting statistics summary: {str(e)}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
