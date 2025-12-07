@@ -15,10 +15,35 @@ from typing import Dict, Any, List
 import src.facebook.register  # noqa: F401
 import src.instagram.register  # noqa: F401
 
+# 配置日志（使用本地时区）
+import time
+from datetime import datetime, timezone, timedelta
+
+class LocalTimeFormatter(logging.Formatter):
+    """使用本地时区（UTC+8）的日志格式化器"""
+    def __init__(self, fmt=None, datefmt=None):
+        super().__init__(fmt, datefmt)
+        # 设置本地时区（UTC+8，中国时区）
+        self.local_tz = timezone(timedelta(hours=8))
+    
+    def formatTime(self, record, datefmt=None):
+        """格式化时间为本地时区"""
+        ct = datetime.fromtimestamp(record.created, tz=self.local_tz)
+        if datefmt:
+            s = ct.strftime(datefmt)
+        else:
+            s = ct.strftime('%Y-%m-%d %H:%M:%S')
+        return s
+
 # 配置日志
+handler = logging.StreamHandler()
+handler.setFormatter(LocalTimeFormatter(
+    fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+))
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    handlers=[handler]
 )
 logger = logging.getLogger(__name__)
 
