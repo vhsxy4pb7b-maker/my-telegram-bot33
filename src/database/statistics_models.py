@@ -1,5 +1,5 @@
 """统计数据模型"""
-from sqlalchemy import Column, Integer, String, DateTime, JSON, Date, Index
+from sqlalchemy import Column, Integer, String, DateTime, JSON, Date, Boolean, Index
 from sqlalchemy.sql import func
 from src.database.database import Base
 
