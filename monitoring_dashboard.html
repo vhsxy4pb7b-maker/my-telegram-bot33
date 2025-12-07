@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,82 +11,82 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f5f5f5;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
         }
-        
+
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 30px;
             border-radius: 10px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        
+
         .header h1 {
             font-size: 28px;
             margin-bottom: 10px;
         }
-        
+
         .status {
             display: inline-block;
             padding: 5px 15px;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             border-radius: 20px;
             font-size: 14px;
         }
-        
+
         .status.connected {
             background: rgba(76, 175, 80, 0.3);
         }
-        
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
-        
+
         .stat-card {
             background: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        
+
         .stat-card h3 {
             color: #666;
             font-size: 14px;
             margin-bottom: 10px;
         }
-        
+
         .stat-card .value {
             font-size: 32px;
             font-weight: bold;
             color: #333;
         }
-        
+
         .replies-section {
             background: white;
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        
+
         .replies-section h2 {
             margin-bottom: 20px;
             color: #333;
         }
-        
+
         .reply-item {
             border-left: 4px solid #667eea;
             padding: 15px;
@@ -94,18 +95,19 @@
             border-radius: 5px;
             animation: slideIn 0.3s ease-out;
         }
-        
+
         @keyframes slideIn {
             from {
                 opacity: 0;
                 transform: translateX(-20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(0);
             }
         }
-        
+
         .reply-header {
             display: flex;
             justify-content: space-between;
@@ -113,24 +115,24 @@
             font-size: 12px;
             color: #666;
         }
-        
+
         .reply-content {
             margin: 10px 0;
         }
-        
+
         .user-message {
             background: #e3f2fd;
             padding: 10px;
             border-radius: 5px;
             margin-bottom: 10px;
         }
-        
+
         .ai-reply {
             background: #f1f8e9;
             padding: 10px;
             border-radius: 5px;
         }
-        
+
         .platform-badge {
             display: inline-block;
             padding: 3px 8px;
@@ -139,17 +141,17 @@
             font-weight: bold;
             margin-right: 5px;
         }
-        
+
         .platform-facebook {
             background: #1877f2;
             color: white;
         }
-        
+
         .platform-instagram {
             background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
             color: white;
         }
-        
+
         .empty-state {
             text-align: center;
             padding: 40px;
@@ -157,6 +159,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -166,7 +169,7 @@
                 <span style="margin-left: 20px;" id="lastUpdate"></span>
             </div>
         </div>
-        
+
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>今日回复数</h3>
@@ -185,7 +188,7 @@
                 <div class="value" id="activeConnections">1</div>
             </div>
         </div>
-        
+
         <div class="replies-section">
             <h2>📝 实时AI回复记录</h2>
             <div id="repliesContainer">
@@ -193,68 +196,104 @@
             </div>
         </div>
     </div>
-    
+
     <script>
         const API_BASE = window.location.origin;
         let eventSource = null;
         let statsInterval = null;
-        
+
         // 初始化
         function init() {
             connectSSE();
             loadInitialData();
             startStatsUpdate();
         }
-        
+
         // 连接SSE
         function connectSSE() {
+            console.log('Connecting to SSE stream:', `${API_BASE}/monitoring/live`);
+            
             eventSource = new EventSource(`${API_BASE}/monitoring/live`);
             
             eventSource.onopen = () => {
+                console.log('SSE connection opened');
                 document.getElementById('connectionStatus').textContent = '✅ 已连接';
                 document.getElementById('connectionStatus').classList.add('connected');
             };
             
-            eventSource.onerror = () => {
+            eventSource.onerror = (error) => {
+                console.error('SSE connection error:', error);
                 document.getElementById('connectionStatus').textContent = '❌ 连接断开';
                 document.getElementById('connectionStatus').classList.remove('connected');
+                
+                // 关闭旧连接
+                if (eventSource) {
+                    eventSource.close();
+                }
+                
                 // 5秒后重连
-                setTimeout(connectSSE, 5000);
+                setTimeout(() => {
+                    console.log('Reconnecting...');
+                    connectSSE();
+                }, 5000);
             };
             
             eventSource.onmessage = (event) => {
                 try {
+                    // 跳过心跳消息
+                    if (event.data.trim() === '' || event.data.startsWith(':')) {
+                        return;
+                    }
+                    
                     const data = JSON.parse(event.data);
+                    console.log('Received event:', data);
                     handleEvent(data);
                 } catch (e) {
-                    console.error('Failed to parse event:', e);
+                    console.error('Failed to parse event:', e, 'Raw data:', event.data);
                 }
             };
         }
-        
+
         // 处理事件
         function handleEvent(data) {
             if (data.type === 'ai_reply') {
                 addReplyItem(data.data);
                 updateLastUpdate();
+            } else if (data.type === 'initial_data') {
+                // 处理初始数据
+                if (data.replies && Array.isArray(data.replies)) {
+                    const container = document.getElementById('repliesContainer');
+                    if (container.querySelector('.empty-state')) {
+                        container.innerHTML = '';
+                    }
+                    
+                    // 按时间倒序显示（最新的在前）
+                    data.replies.reverse().forEach(reply => {
+                        if (reply.type === 'ai_reply' && reply.data) {
+                            addReplyItem(reply.data);
+                        }
+                    });
+                }
+            } else if (data.type === 'connected') {
+                console.log('Connected to monitoring stream:', data.connection_id);
             } else if (data.type === 'system_event') {
                 console.log('System event:', data);
             }
         }
-        
+
         // 格式化时间（处理时区）
         function formatTime(timestamp) {
             if (!timestamp) return '未知时间';
-            
+
             try {
                 // 解析ISO格式时间字符串
                 const date = new Date(timestamp);
-                
+
                 // 检查日期是否有效
                 if (isNaN(date.getTime())) {
                     return timestamp; // 如果无法解析，返回原始字符串
                 }
-                
+
                 // 使用本地时区格式化
                 const options = {
                     year: 'numeric',
@@ -266,33 +305,33 @@
                     hour12: false,
                     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
                 };
-                
+
                 return date.toLocaleString('zh-CN', options);
             } catch (e) {
                 console.error('Time format error:', e);
                 return timestamp;
             }
         }
-        
+
         // 添加回复项
         function addReplyItem(reply) {
             const container = document.getElementById('repliesContainer');
-            
+
             // 移除空状态
             if (container.querySelector('.empty-state')) {
                 container.innerHTML = '';
             }
-            
+
             const item = document.createElement('div');
             item.className = 'reply-item';
-            
+
             const platformClass = `platform-${reply.platform || 'unknown'}`;
-            const platformName = reply.platform === 'facebook' ? 'Facebook' : 
-                                 reply.platform === 'instagram' ? 'Instagram' : 'Unknown';
-            
+            const platformName = reply.platform === 'facebook' ? 'Facebook' :
+                reply.platform === 'instagram' ? 'Instagram' : 'Unknown';
+
             // 格式化时间
             const formattedTime = formatTime(reply.timestamp);
-            
+
             item.innerHTML = `
                 <div class="reply-header">
                     <div>
@@ -310,59 +349,76 @@
                     </div>
                 </div>
             `;
-            
+
             container.insertBefore(item, container.firstChild);
-            
+
             // 限制显示数量
             const items = container.querySelectorAll('.reply-item');
             if (items.length > 50) {
                 items[items.length - 1].remove();
             }
         }
-        
+
         // 加载初始数据
         async function loadInitialData() {
             try {
                 const response = await fetch(`${API_BASE}/monitoring/recent-replies?limit=10`);
                 const result = await response.json();
                 
-                if (result.success && result.data) {
+                console.log('Initial data response:', result);
+                
+                if (result.success && result.data && Array.isArray(result.data)) {
                     const container = document.getElementById('repliesContainer');
-                    container.innerHTML = '';
+                    if (container.querySelector('.empty-state')) {
+                        container.innerHTML = '';
+                    }
                     
-                    result.data.reverse().forEach(reply => {
-                        if (reply.type === 'ai_reply') {
-                            addReplyItem(reply.data);
+                    // 数据格式：result.data 是事件对象数组，每个对象有 type 和 data
+                    result.data.reverse().forEach(event => {
+                        if (event.type === 'ai_reply' && event.data) {
+                            addReplyItem(event.data);
                         }
                     });
+                } else {
+                    console.log('No initial data available');
                 }
             } catch (e) {
                 console.error('Failed to load initial data:', e);
+                // 显示错误信息
+                const container = document.getElementById('repliesContainer');
+                if (container.querySelector('.empty-state')) {
+                    container.querySelector('.empty-state').textContent = 
+                        `加载数据失败: ${e.message}`;
+                }
             }
         }
-        
+
         // 更新统计
         async function updateStats() {
             try {
                 const response = await fetch(`${API_BASE}/monitoring/stats`);
                 const result = await response.json();
                 
+                console.log('Stats response:', result);
+                
                 if (result.success && result.data) {
-                    document.getElementById('todayReplies').textContent = result.data.today.total_replies || 0;
-                    document.getElementById('todayCustomers').textContent = result.data.today.unique_customers || 0;
-                    document.getElementById('lastHour').textContent = result.data.last_hour.replies || 0;
+                    document.getElementById('todayReplies').textContent = result.data.today?.total_replies || 0;
+                    document.getElementById('todayCustomers').textContent = result.data.today?.unique_customers || 0;
+                    document.getElementById('lastHour').textContent = result.data.last_hour?.replies || 0;
+                } else {
+                    console.warn('Stats request failed:', result);
                 }
             } catch (e) {
                 console.error('Failed to update stats:', e);
             }
         }
-        
+
         // 开始统计更新
         function startStatsUpdate() {
             updateStats();
             statsInterval = setInterval(updateStats, 5000); // 每5秒更新一次
         }
-        
+
         // 更新最后更新时间
         function updateLastUpdate() {
             const now = new Date();
@@ -372,10 +428,10 @@
                 second: '2-digit',
                 hour12: false
             });
-            document.getElementById('lastUpdate').textContent = 
+            document.getElementById('lastUpdate').textContent =
                 `最后更新: ${timeString} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`;
         }
-        
+
         // 页面卸载时清理
         window.addEventListener('beforeunload', () => {
             if (eventSource) {
@@ -385,10 +441,10 @@
                 clearInterval(statsInterval);
             }
         });
-        
+
         // 启动
         init();
     </script>
 </body>
-</html>
 
+</html>
