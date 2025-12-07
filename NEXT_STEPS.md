@@ -96,10 +96,33 @@ ALGORITHM=HS256
 
 ### 1. 获取 Webhook URL
 
-从 Zeabur 项目页面获取你的应用 URL：
-```
-https://你的域名.zeabur.app/webhook
-```
+**在 Zeabur 平台查找域名：**
+
+1. **登录 Zeabur**
+   - 访问 https://zeabur.com
+   - 使用 GitHub 账号登录
+
+2. **进入项目页面**
+   - 选择你的项目
+   - 点击你的应用服务（通常是项目名称）
+
+3. **查找域名**
+   - 在服务页面顶部或侧边栏，找到 **"Domains"** 或 **"域名"** 部分
+   - 你会看到类似这样的域名：
+     ```
+     your-service-name.zeabur.app
+     ```
+   - 或者点击 **"Settings"** → **"Domains"** 查看
+
+4. **复制域名**
+   - 复制完整的域名（例如：`my-telegram-bot33.zeabur.app`）
+   - Webhook URL 格式：`https://你的域名.zeabur.app/webhook`
+   - 例如：`https://my-telegram-bot33.zeabur.app/webhook`
+
+**如果找不到域名：**
+- 检查服务是否已成功部署
+- 查看服务状态是否为 "Running"
+- 等待部署完成（可能需要几分钟）
 
 ### 2. 在 Facebook Developer Console 配置
 
