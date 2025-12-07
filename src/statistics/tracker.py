@@ -18,7 +18,8 @@ class StatisticsTracker:
     def get_or_create_daily_statistics(self, target_date: Optional[date] = None) -> DailyStatistics:
         """获取或创建每日统计数据"""
         if target_date is None:
-            target_date = date.today()
+            # 使用UTC时区的今天日期
+            target_date = datetime.now(timezone.utc).date()
         
         stats = self.db.query(DailyStatistics)\
             .filter(DailyStatistics.date == target_date)\
@@ -171,7 +172,8 @@ class StatisticsTracker:
     
     def _update_daily_statistics(self):
         """更新每日统计数据"""
-        today = date.today()
+        # 使用UTC时区的今天日期
+        today = datetime.now(timezone.utc).date()
         stats = self.get_or_create_daily_statistics(today)
         
         # 统计今天的客户数
@@ -242,7 +244,8 @@ class StatisticsTracker:
     def get_daily_statistics(self, target_date: Optional[date] = None) -> Dict[str, Any]:
         """获取每日统计数据"""
         if target_date is None:
-            target_date = date.today()
+            # 使用UTC时区的今天日期
+            target_date = datetime.now(timezone.utc).date()
         
         stats = self.get_or_create_daily_statistics(target_date)
         

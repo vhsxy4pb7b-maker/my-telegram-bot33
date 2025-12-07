@@ -124,10 +124,11 @@ class RealtimeMonitor:
         from src.database.models import Conversation
         from sqlalchemy import func
 
-        today = date.today()
-        today_start = datetime.combine(today, datetime.min.time())
+        # 使用UTC时区的今天日期
+        today_utc = datetime.now(timezone.utc).date()
+        today_start = datetime.combine(today_utc, datetime.min.time(), timezone.utc)
         today_end = datetime.combine(
-            today + timedelta(days=1), datetime.min.time())
+            today_utc + timedelta(days=1), datetime.min.time(), timezone.utc)
 
         # 今日统计
         today_stats = db.query(
@@ -140,8 +141,8 @@ class RealtimeMonitor:
             Conversation.ai_reply_at < today_end
         ).first()
 
-        # 最近1小时统计
-        one_hour_ago = datetime.now() - timedelta(hours=1)
+        # 最近1小时统计（使用UTC时间）
+        one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
         recent_stats = db.query(
             func.count(Conversation.id).label('recent_replies')
         ).filter(

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from src.database.database import get_db
 from src.statistics.tracker import StatisticsTracker
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 import logging
 
@@ -224,18 +224,20 @@ async def get_ai_replies(
             .filter(Conversation.ai_replied == True)\
             .filter(Conversation.ai_reply_content.isnot(None))
         
-        # 日期过滤
+        # 日期过滤（使用UTC时区）
         if start_date:
             try:
                 start = datetime.strptime(start_date, "%Y-%m-%d").date()
-                query = query.filter(Conversation.ai_reply_at >= datetime.combine(start, datetime.min.time()))
+                start_dt = datetime.combine(start, datetime.min.time(), timezone.utc)
+                query = query.filter(Conversation.ai_reply_at >= start_dt)
             except ValueError:
                 return {"error": "开始日期格式错误，请使用 YYYY-MM-DD 格式"}
         
         if end_date:
             try:
                 end = datetime.strptime(end_date, "%Y-%m-%d").date()
-                query = query.filter(Conversation.ai_reply_at <= datetime.combine(end, datetime.max.time()))
+                end_dt = datetime.combine(end, datetime.max.time(), timezone.utc)
+                query = query.filter(Conversation.ai_reply_at <= end_dt)
             except ValueError:
                 return {"error": "结束日期格式错误，请使用 YYYY-MM-DD 格式"}
         
@@ -302,27 +304,31 @@ async def get_ai_replies_count(
             .filter(Conversation.ai_replied == True)\
             .filter(Conversation.ai_reply_content.isnot(None))
         
-        # 日期过滤
+        # 日期过滤（使用UTC时区）
         if start_date:
             try:
                 start = datetime.strptime(start_date, "%Y-%m-%d").date()
-                query = query.filter(Conversation.ai_reply_at >= datetime.combine(start, datetime.min.time()))
+                start_dt = datetime.combine(start, datetime.min.time(), timezone.utc)
+                query = query.filter(Conversation.ai_reply_at >= start_dt)
             except ValueError:
                 return {"error": "开始日期格式错误，请使用 YYYY-MM-DD 格式"}
         
         if end_date:
             try:
                 end = datetime.strptime(end_date, "%Y-%m-%d").date()
-                query = query.filter(Conversation.ai_reply_at <= datetime.combine(end, datetime.max.time()))
+                end_dt = datetime.combine(end, datetime.max.time(), timezone.utc)
+                query = query.filter(Conversation.ai_reply_at <= end_dt)
             except ValueError:
                 return {"error": "结束日期格式错误，请使用 YYYY-MM-DD 格式"}
         
-        # 如果没有指定日期，默认今天
+        # 如果没有指定日期，默认今天（UTC时区）
         if not start_date and not end_date:
-            today = date.today()
+            today_utc = datetime.now(timezone.utc).date()
+            today_start = datetime.combine(today_utc, datetime.min.time(), timezone.utc)
+            today_end = datetime.combine(today_utc + timedelta(days=1), datetime.min.time(), timezone.utc)
             query = query.filter(
-                Conversation.ai_reply_at >= datetime.combine(today, datetime.min.time()),
-                Conversation.ai_reply_at < datetime.combine(today + timedelta(days=1), datetime.min.time())
+                Conversation.ai_reply_at >= today_start,
+                Conversation.ai_reply_at < today_end
             )
         
         total_count = query.count()
@@ -337,11 +343,13 @@ async def get_ai_replies_count(
         
         if start_date:
             start = datetime.strptime(start_date, "%Y-%m-%d").date()
-            daily_query = daily_query.filter(Conversation.ai_reply_at >= datetime.combine(start, datetime.min.time()))
+            start_dt = datetime.combine(start, datetime.min.time(), timezone.utc)
+            daily_query = daily_query.filter(Conversation.ai_reply_at >= start_dt)
         
         if end_date:
             end = datetime.strptime(end_date, "%Y-%m-%d").date()
-            daily_query = daily_query.filter(Conversation.ai_reply_at <= datetime.combine(end, datetime.max.time()))
+            end_dt = datetime.combine(end, datetime.max.time(), timezone.utc)
+            daily_query = daily_query.filter(Conversation.ai_reply_at <= end_dt)
         
         daily_counts = daily_query\
             .group_by(cast(Conversation.ai_reply_at, Date))\
