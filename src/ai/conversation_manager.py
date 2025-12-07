@@ -122,8 +122,8 @@ class ConversationManager:
         if conversation:
             conversation.ai_replied = True
             conversation.ai_reply_content = reply_content
-            from sqlalchemy.sql import func
-            conversation.ai_reply_at = func.now()  # 数据库函数自动使用服务器时区
+            from datetime import datetime, timezone
+            conversation.ai_reply_at = datetime.now(timezone.utc)  # 使用UTC时区
             
             self.db.commit()
             self.db.refresh(conversation)

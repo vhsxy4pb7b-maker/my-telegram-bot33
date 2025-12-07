@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import text
 import enum
 from src.database.database import Base
 
@@ -58,8 +59,8 @@ class Customer(Base):
     phone = Column(String(50))
     company_name = Column(String(200))
     location = Column(String(200))
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"))
+    updated_at = Column(DateTime(timezone=True), onupdate=text("timezone('utc', now())"))
     
     # 关系
     conversations = relationship("Conversation", back_populates="customer")
@@ -96,9 +97,9 @@ class Conversation(Base):
     filter_reason = Column(String(500))
     
     # 时间戳
-    received_at = Column(DateTime(timezone=True), server_default=func.now())
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    received_at = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"))
+    created_at = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"))
+    updated_at = Column(DateTime(timezone=True), onupdate=text("timezone('utc', now())"))
     
     # 关系
     customer = relationship("Customer", back_populates="conversations")
@@ -120,8 +121,8 @@ class CollectedData(Base):
     is_validated = Column(Boolean, default=False)
     validation_errors = Column(JSON)
     
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"))
+    updated_at = Column(DateTime(timezone=True), onupdate=text("timezone('utc', now())"))
     
     # 关系
     conversation = relationship("Conversation", back_populates="collected_data")
@@ -143,9 +144,9 @@ class Review(Base):
     ai_suggestion = Column(Text)  # AI 建议
     
     # 时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"))
     reviewed_at = Column(DateTime(timezone=True))
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=text("timezone('utc', now())"))
     
     # 关系
     customer = relationship("Customer", back_populates="reviews")
@@ -164,6 +165,6 @@ class IntegrationLog(Base):
     response_data = Column(JSON)
     error_message = Column(Text)
     
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"))
 
 

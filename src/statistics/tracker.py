@@ -64,7 +64,7 @@ class StatisticsTracker:
         
         interaction = CustomerInteraction(
             customer_id=customer_id,
-            date=date.today(),
+            date=datetime.now(timezone.utc).date(),
             platform=platform,
             message_type=message_type,
             message_summary=message_summary,
@@ -84,7 +84,7 @@ class StatisticsTracker:
     
     def mark_joined_group(self, customer_id: int) -> bool:
         """标记客户已加入群组"""
-        today = date.today()
+        today = datetime.now(timezone.utc).date()
         
         # 更新今天的交互记录
         interactions = self.db.query(CustomerInteraction)\
@@ -107,7 +107,7 @@ class StatisticsTracker:
     
     def mark_order_created(self, customer_id: int) -> bool:
         """标记客户已开单"""
-        today = date.today()
+        today = datetime.now(timezone.utc).date()
         
         # 更新今天的交互记录
         interactions = self.db.query(CustomerInteraction)\

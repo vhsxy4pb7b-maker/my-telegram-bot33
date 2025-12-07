@@ -1,6 +1,7 @@
 """统计数据模型"""
 from sqlalchemy import Column, Integer, String, DateTime, JSON, Date, Boolean, Index
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import text
 from src.database.database import Base
 
 
@@ -32,8 +33,8 @@ class DailyStatistics(Base):
     frequent_questions = Column(JSON, default={})
     
     # 时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"))
+    updated_at = Column(DateTime(timezone=True), onupdate=text("timezone('utc', now())"))
     
     __table_args__ = (
         Index('idx_daily_statistics_date', 'date'),
@@ -63,8 +64,8 @@ class CustomerInteraction(Base):
     order_created = Column(Boolean, default=False)  # 是否开单
     
     # 时间戳
-    interaction_time = Column(DateTime(timezone=True), server_default=func.now())
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    interaction_time = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"))
+    created_at = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"))
     
     __table_args__ = (
         Index('idx_customer_interactions_customer_date', 'customer_id', 'date'),
@@ -80,8 +81,8 @@ class FrequentQuestion(Base):
     question_text = Column(String(500), nullable=False, unique=True, index=True)  # 问题文本
     question_category = Column(String(50))  # 问题分类
     occurrence_count = Column(Integer, default=1)  # 出现次数
-    first_seen = Column(DateTime(timezone=True), server_default=func.now())  # 首次出现时间
-    last_seen = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())  # 最后出现时间
+    first_seen = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"))  # 首次出现时间
+    last_seen = Column(DateTime(timezone=True), server_default=text("timezone('utc', now())"), onupdate=text("timezone('utc', now())"))  # 最后出现时间
     
     # 关联信息
     sample_responses = Column(JSON)  # 示例回复（存储几个典型的AI回复）

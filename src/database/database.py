@@ -1,5 +1,5 @@
 """数据库连接和会话管理"""
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
@@ -12,6 +12,8 @@ if "sqlite" in settings.database_url:
     connect_args = {"check_same_thread": False}
     poolclass = NullPool
 else:
+    # PostgreSQL: 设置时区为UTC
+    connect_args = {"options": "-c timezone=UTC"}
     poolclass = None
 
 engine = create_engine(
@@ -21,6 +23,15 @@ engine = create_engine(
     pool_pre_ping=True if "sqlite" not in settings.database_url else False,
     connect_args=connect_args,
 )
+
+# 确保每个连接都使用UTC时区（PostgreSQL）
+@event.listens_for(engine, "connect")
+def set_timezone(dbapi_conn, connection_record):
+    """设置数据库连接时区为UTC"""
+    if "postgresql" in settings.database_url or "postgres" in settings.database_url:
+        cursor = dbapi_conn.cursor()
+        cursor.execute("SET timezone = 'UTC'")
+        cursor.close()
 
 # 创建会话工厂
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

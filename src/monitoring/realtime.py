@@ -126,7 +126,8 @@ class RealtimeMonitor:
 
         # 使用UTC时区的今天日期
         today_utc = datetime.now(timezone.utc).date()
-        today_start = datetime.combine(today_utc, datetime.min.time(), timezone.utc)
+        today_start = datetime.combine(
+            today_utc, datetime.min.time(), timezone.utc)
         today_end = datetime.combine(
             today_utc + timedelta(days=1), datetime.min.time(), timezone.utc)
 

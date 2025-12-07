@@ -143,8 +143,8 @@ async def get_statistics_summary(
             except ValueError:
                 return {"error": "日期格式错误，请使用 YYYY-MM-DD 格式"}
         else:
-            # 默认最近7天
-            end = date.today()
+            # 默认最近7天（使用UTC时区）
+            end = datetime.now(timezone.utc).date()
             start = end - timedelta(days=6)
         
         # 查询日期范围内的统计数据
