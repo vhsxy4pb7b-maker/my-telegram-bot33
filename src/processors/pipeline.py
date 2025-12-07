@@ -197,3 +197,4 @@ def create_default_pipeline() -> MessagePipeline:
 # 全局默认管道
 default_pipeline = create_default_pipeline()
 
+

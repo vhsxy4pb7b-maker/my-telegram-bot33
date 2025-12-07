@@ -38,3 +38,4 @@ loan_config:
   new_customer_discount: 50  # 首周费用折扣百分比
   late_fee_percent: 3  # 滞纳金百分比
 
+

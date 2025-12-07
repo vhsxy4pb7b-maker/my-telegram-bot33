@@ -1,0 +1,32 @@
+Zeabur 环境变量配置清单
+======================
+
+请在 Zeabur 项目页面 → Environment Variables 中添加以下变量：
+
+必需变量：
+---------
+FACEBOOK_APP_ID=你的Facebook应用ID
+FACEBOOK_APP_SECRET=你的Facebook应用密钥
+FACEBOOK_ACCESS_TOKEN=你的Facebook访问令牌
+FACEBOOK_VERIFY_TOKEN=你的Facebook验证令牌（自定义字符串）
+OPENAI_API_KEY=你的OpenAI API密钥
+TELEGRAM_BOT_TOKEN=你的Telegram Bot令牌
+TELEGRAM_CHAT_ID=你的Telegram聊天ID
+SECRET_KEY=YB-Y7XHm6JuFqMl1fJOuFRLgUEJZPG2x5lQnVC_tJ2U
+
+可选变量：
+---------
+OPENAI_MODEL=gpt-4
+OPENAI_TEMPERATURE=0.7
+HOST=0.0.0.0
+PORT=$PORT
+DEBUG=false
+
+注意：
+-----
+1. DATABASE_URL 由 Zeabur PostgreSQL 自动设置，无需手动添加
+2. 将所有 "你的XXX" 替换为实际值
+3. FACEBOOK_VERIFY_TOKEN 可以是任意字符串，但要记住它（配置 Webhook 时需要）
+4. SECRET_KEY 使用上面提供的值
+
+

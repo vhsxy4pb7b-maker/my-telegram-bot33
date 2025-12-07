@@ -91,3 +91,4 @@ class FrequentQuestion(Base):
         Index('idx_count', 'occurrence_count'),
     )
 
+

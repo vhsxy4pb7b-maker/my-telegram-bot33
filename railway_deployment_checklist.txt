@@ -1,0 +1,66 @@
+Railway 部署检查清单
+====================
+
+步骤 1: Railway 账号和项目
+---------------------------
+[ ] 访问 https://railway.app 并登录
+[ ] 创建新项目
+[ ] 选择 "Deploy from GitHub repo"
+[ ] 选择仓库: vhsxy4pb7b-maker/my-telegram-bot33
+[ ] 等待初始部署完成
+
+步骤 2: 数据库配置
+------------------
+[ ] 添加 PostgreSQL 数据库
+[ ] 确认 DATABASE_URL 自动设置
+
+步骤 3: 环境变量配置
+---------------------
+[ ] FACEBOOK_APP_ID
+[ ] FACEBOOK_APP_SECRET
+[ ] FACEBOOK_ACCESS_TOKEN
+[ ] FACEBOOK_VERIFY_TOKEN
+[ ] OPENAI_API_KEY
+[ ] TELEGRAM_BOT_TOKEN
+[ ] TELEGRAM_CHAT_ID
+[ ] SECRET_KEY (使用: YB-Y7XHm6JuFqMl1fJOuFRLgUEJZPG2x5lQnVC_tJ2U)
+
+步骤 4: 数据库迁移
+------------------
+[ ] 安装 Railway CLI: npm i -g @railway/cli
+[ ] 登录: railway login
+[ ] 链接项目: railway link
+[ ] 运行迁移: railway run alembic upgrade head
+
+步骤 5: 获取域名
+----------------
+[ ] 在 Settings → Networking 获取 Public Domain
+[ ] 复制域名（格式: xxx.up.railway.app）
+
+步骤 6: 配置 Webhook
+-------------------
+[ ] 打开 Facebook 开发者控制台
+[ ] 进入 Webhooks 设置
+[ ] 设置 Callback URL: https://你的域名/webhook
+[ ] 设置 Verify Token: 使用环境变量中的值
+[ ] 订阅事件: messages, messaging_postbacks, feed
+[ ] 验证并保存
+
+步骤 7: 验证部署
+----------------
+[ ] 访问 /health 端点，返回 {"status": "healthy"}
+[ ] 访问 /docs 端点，显示 API 文档
+[ ] 发送测试消息到 Facebook
+[ ] 确认收到自动回复
+
+步骤 8: 监控和维护
+------------------
+[ ] 查看 Railway 日志，确认无错误
+[ ] 测试统计接口: /statistics/daily
+[ ] 配置页面自动回复（如需要）
+
+完成！
+------
+所有步骤完成后，系统应该可以正常运行。
+
+

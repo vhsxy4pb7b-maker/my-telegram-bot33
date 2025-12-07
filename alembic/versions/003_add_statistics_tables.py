@@ -88,3 +88,4 @@ def downgrade() -> None:
     op.drop_index('idx_date', table_name='daily_statistics')
     op.drop_table('daily_statistics')
 
+
