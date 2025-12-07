@@ -291,18 +291,22 @@
                 let timeStr = String(timestamp).trim();
 
                 // 处理各种时间格式
-                // 如果以Z结尾，已经是UTC格式
-                if (timeStr.endsWith('Z')) {
-                    // 已经是UTC格式，直接使用
+                // 如果包含+00:00，已经是UTC格式，直接使用
+                if (timeStr.includes('+00:00')) {
+                    // UTC格式，直接使用
                 }
-                // 如果包含+00:00或+0000，也是UTC格式
-                else if (timeStr.includes('+00:00') || timeStr.includes('+0000')) {
-                    // 已经是UTC格式
+                // 如果以Z结尾，也是UTC格式
+                else if (timeStr.endsWith('Z')) {
+                    // UTC格式，直接使用
+                }
+                // 如果包含+0000（没有冒号），也是UTC格式
+                else if (timeStr.includes('+0000')) {
+                    // UTC格式，直接使用
                 }
                 // 如果没有时区信息，假设是UTC并添加Z
                 else if (!timeStr.includes('+') && !timeStr.includes('-', 10) && !timeStr.endsWith('Z')) {
                     // 没有时区信息，假设是UTC
-                    timeStr = timeStr.endsWith('Z') ? timeStr : timeStr + 'Z';
+                    timeStr = timeStr + 'Z';
                 }
                 // 如果有其他时区（如+08:00），保持原样，JavaScript会自动处理
 
@@ -312,10 +316,13 @@
 
                 // 检查日期是否有效
                 if (isNaN(date.getTime())) {
-                    console.warn('Invalid timestamp:', timestamp);
+                    console.warn('Invalid timestamp:', timestamp, 'processed:', timeStr);
                     return timestamp;
                 }
 
+                // 验证：确保日期对象正确解析了UTC时间
+                // date对象内部存储的是UTC时间，toLocaleString会自动转换为本地时区
+                
                 // 使用本地时区格式化（不指定timeZone，让浏览器自动使用本地时区）
                 // toLocaleString 会自动将UTC时间转换为本地时区
                 const options = {
