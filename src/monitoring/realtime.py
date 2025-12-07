@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 
 class RealtimeMonitor:
     """实时监控器 - 跟踪AI回复和系统状态"""
-    
+
     def __init__(self, max_history: int = 100):
         """
         初始化实时监控器
-        
+
         Args:
             max_history: 保留的最大历史记录数
         """
@@ -25,7 +25,7 @@ class RealtimeMonitor:
         self.active_connections: List[Dict[str, Any]] = []
         self.stats_cache: Dict[str, Any] = {}
         self._lock = asyncio.Lock()
-    
+
     async def record_ai_reply(
         self,
         customer_id: int,
@@ -37,7 +37,7 @@ class RealtimeMonitor:
     ):
         """
         记录AI回复事件
-        
+
         Args:
             customer_id: 客户ID
             customer_name: 客户姓名
@@ -52,7 +52,7 @@ class RealtimeMonitor:
         elif timestamp.tzinfo is None:
             # 如果没有时区信息，假设为UTC
             timestamp = timestamp.replace(tzinfo=timezone.utc)
-        
+
         event = {
             "type": "ai_reply",
             "timestamp": timestamp.isoformat(),  # ISO格式包含时区信息
@@ -65,15 +65,15 @@ class RealtimeMonitor:
                 "reply_length": len(ai_reply)
             }
         }
-        
+
         self.recent_replies.append(event)
-        
+
         # 更新统计缓存
         await self._update_stats_cache()
-        
+
         # 推送给所有连接的客户端
         await self._broadcast_event(event)
-    
+
     async def record_system_event(
         self,
         event_type: str,
@@ -82,7 +82,7 @@ class RealtimeMonitor:
     ):
         """
         记录系统事件
-        
+
         Args:
             event_type: 事件类型（如 'error', 'warning', 'info'）
             message: 事件消息
@@ -95,49 +95,51 @@ class RealtimeMonitor:
             "message": message,
             "data": data or {}
         }
-        
+
         await self._broadcast_event(event)
-    
+
     async def get_recent_replies(self, limit: int = 20) -> List[Dict[str, Any]]:
         """
         获取最近的AI回复记录
-        
+
         Args:
             limit: 返回的记录数
-            
+
         Returns:
             最近的回复记录列表
         """
         return list(self.recent_replies)[-limit:]
-    
+
     async def get_live_stats(self, db: Session) -> Dict[str, Any]:
         """
         获取实时统计数据
-        
+
         Args:
             db: 数据库会话
-            
+
         Returns:
             实时统计数据
         """
         from datetime import date, timedelta
         from src.database.models import Conversation
         from sqlalchemy import func
-        
+
         today = date.today()
         today_start = datetime.combine(today, datetime.min.time())
-        today_end = datetime.combine(today + timedelta(days=1), datetime.min.time())
-        
+        today_end = datetime.combine(
+            today + timedelta(days=1), datetime.min.time())
+
         # 今日统计
         today_stats = db.query(
             func.count(Conversation.id).label('total_replies'),
-            func.count(func.distinct(Conversation.customer_id)).label('unique_customers')
+            func.count(func.distinct(Conversation.customer_id)
+                       ).label('unique_customers')
         ).filter(
             Conversation.ai_replied == True,
             Conversation.ai_reply_at >= today_start,
             Conversation.ai_reply_at < today_end
         ).first()
-        
+
         # 最近1小时统计
         one_hour_ago = datetime.now() - timedelta(hours=1)
         recent_stats = db.query(
@@ -146,7 +148,7 @@ class RealtimeMonitor:
             Conversation.ai_replied == True,
             Conversation.ai_reply_at >= one_hour_ago
         ).first()
-        
+
         # 平台分布
         platform_stats = db.query(
             Conversation.platform,
@@ -156,7 +158,7 @@ class RealtimeMonitor:
             Conversation.ai_reply_at >= today_start,
             Conversation.ai_reply_at < today_end
         ).group_by(Conversation.platform).all()
-        
+
         return {
             "today": {
                 "total_replies": today_stats.total_replies or 0,
@@ -171,41 +173,41 @@ class RealtimeMonitor:
             },
             "cache_updated_at": self.stats_cache.get("updated_at")
         }
-    
+
     async def _update_stats_cache(self):
         """更新统计缓存"""
         async with self._lock:
             self.stats_cache = {
                 "total_replies": len(self.recent_replies),
-                "updated_at": datetime.now().isoformat()
+                "updated_at": datetime.now(timezone.utc).isoformat()
             }
-    
+
     async def _broadcast_event(self, event: Dict[str, Any]):
         """向所有连接的客户端广播事件"""
         if not self.active_connections:
             return
-        
+
         message = f"data: {json.dumps(event)}\n\n"
         disconnected = []
-        
+
         for conn in self.active_connections:
             try:
                 await conn["queue"].put(message)
             except Exception as e:
                 logger.warning(f"Failed to send event to client: {e}")
                 disconnected.append(conn)
-        
+
         # 移除断开的连接
         for conn in disconnected:
             self.active_connections.remove(conn)
-    
+
     async def add_connection(self, connection_id: str) -> asyncio.Queue:
         """
         添加新的SSE连接
-        
+
         Args:
             connection_id: 连接ID
-            
+
         Returns:
             消息队列
         """
@@ -213,11 +215,11 @@ class RealtimeMonitor:
         self.active_connections.append({
             "id": connection_id,
             "queue": queue,
-            "connected_at": datetime.now()
+            "connected_at": datetime.now(timezone.utc)
         })
         logger.info(f"New monitoring connection: {connection_id}")
         return queue
-    
+
     async def remove_connection(self, connection_id: str):
         """移除连接"""
         self.active_connections = [
@@ -229,4 +231,3 @@ class RealtimeMonitor:
 
 # 全局监控实例
 realtime_monitor = RealtimeMonitor()
-

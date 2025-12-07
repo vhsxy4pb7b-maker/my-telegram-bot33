@@ -122,9 +122,8 @@ class ConversationManager:
         if conversation:
             conversation.ai_replied = True
             conversation.ai_reply_content = reply_content
-            from datetime import datetime
             from sqlalchemy.sql import func
-            conversation.ai_reply_at = func.now()
+            conversation.ai_reply_at = func.now()  # 数据库函数自动使用服务器时区
             
             self.db.commit()
             self.db.refresh(conversation)

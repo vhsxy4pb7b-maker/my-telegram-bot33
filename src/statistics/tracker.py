@@ -1,5 +1,5 @@
 """统计数据追踪器"""
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func as sql_func
@@ -143,14 +143,14 @@ class StatisticsTracker:
         if question:
             # 更新出现次数
             question.occurrence_count += 1
-            question.last_seen = datetime.now()
+            question.last_seen = datetime.now(timezone.utc)
             
             # 更新示例回复（保留最新的几个）
             if sample_response:
                 sample_responses = question.sample_responses or []
                 sample_responses.append({
                     "response": sample_response[:200],
-                    "time": datetime.now().isoformat()
+                    "time": datetime.now(timezone.utc).isoformat()
                 })
                 # 只保留最近5个
                 question.sample_responses = sample_responses[-5:]
@@ -162,7 +162,7 @@ class StatisticsTracker:
                 occurrence_count=1,
                 sample_responses=[{
                     "response": sample_response[:200] if sample_response else None,
-                    "time": datetime.now().isoformat()
+                    "time": datetime.now(timezone.utc).isoformat()
                 }] if sample_response else []
             )
             self.db.add(question)

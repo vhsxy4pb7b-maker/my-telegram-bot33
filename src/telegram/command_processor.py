@@ -3,7 +3,7 @@ from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from src.database.models import Review, ReviewStatus, Conversation, Customer
 from src.database.database import get_db
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -90,14 +90,14 @@ class CommandProcessor:
                     status=ReviewStatus.APPROVED,
                     reviewed_by=reviewer,
                     review_notes=notes,
-                    reviewed_at=datetime.utcnow()
+                    reviewed_at=datetime.now(timezone.utc)
                 )
                 self.db.add(review)
             else:
                 review.status = ReviewStatus.APPROVED
                 review.reviewed_by = reviewer
                 review.review_notes = notes
-                review.reviewed_at = datetime.utcnow()
+                review.reviewed_at = datetime.now(timezone.utc)
             
             # 标记对话为已处理
             conversation.is_processed = True
@@ -160,14 +160,14 @@ class CommandProcessor:
                     status=ReviewStatus.REJECTED,
                     reviewed_by=reviewer,
                     review_notes=notes,
-                    reviewed_at=datetime.utcnow()
+                    reviewed_at=datetime.now(timezone.utc)
                 )
                 self.db.add(review)
             else:
                 review.status = ReviewStatus.REJECTED
                 review.reviewed_by = reviewer
                 review.review_notes = notes
-                review.reviewed_at = datetime.utcnow()
+                review.reviewed_at = datetime.now(timezone.utc)
             
             # 标记对话为已处理
             conversation.is_processed = True
