@@ -50,7 +50,7 @@ def check_railway_cli() -> bool:
             return True
     except FileNotFoundError:
         pass
-    
+
     print("❌ Railway CLI 未安装")
     print("\n安装命令:")
     print("  npm i -g @railway/cli")
@@ -71,7 +71,7 @@ def check_git_status() -> bool:
             return True
     except (FileNotFoundError, subprocess.SubprocessError):
         pass
-    
+
     print("⚠️  Git 远程仓库未配置或未检测到")
     return False
 
@@ -82,10 +82,10 @@ def show_env_vars_guide() -> None:
     print("环境变量配置指南")
     print(SEPARATOR)
     print("\n请在 Railway 项目页面 → Variables 中添加以下变量：\n")
-    
+
     for var, desc in ENV_VARS:
         print(f"  {var:30} = {desc}")
-    
+
     print("\n注意: DATABASE_URL 由 Railway 自动设置，无需手动添加")
 
 
@@ -160,15 +160,15 @@ def handle_railway_cli_interaction(has_cli: bool) -> None:
         print_step(5, "使用 Railway CLI")
         print("\n✅ Railway CLI 已安装，可以使用以下命令：")
         show_railway_commands()
-        
+
         print("\n是否现在执行 Railway CLI 命令？")
         print("1. 登录 Railway")
         print("2. 链接项目")
         print("3. 运行数据库迁移")
         print("4. 跳过（稍后手动执行）")
-        
+
         choice = input("\n请选择 (1-4): ").strip()
-        
+
         if choice != "4":
             execute_railway_command(choice)
     else:
@@ -183,26 +183,26 @@ def main() -> None:
     print(f"\n{SEPARATOR}")
     print("Railway 部署辅助工具")
     print(SEPARATOR)
-    
+
     # 检查环境
     print_step(1, "检查环境")
     has_cli = check_railway_cli()
     check_git_status()
-    
+
     # 显示部署步骤
     show_deployment_steps()
     show_database_setup()
-    
+
     # 配置环境变量
     print_step(4, "配置环境变量")
     show_env_vars_guide()
-    
+
     # Railway CLI 交互
     handle_railway_cli_interaction(has_cli)
-    
+
     # 显示检查清单
     show_deployment_checklist()
-    
+
     print(f"\n{SEPARATOR}")
     print("详细步骤请查看: STEP_BY_STEP_RAILWAY.md")
     print(SEPARATOR)

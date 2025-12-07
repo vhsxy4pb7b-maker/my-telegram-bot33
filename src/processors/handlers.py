@@ -213,6 +213,19 @@ class AIReplyHandler(BaseProcessor):
                     sample_response=ai_reply[:200]
                 )
             
+            # 实时监控：记录AI回复事件
+            try:
+                from src.monitoring.realtime import realtime_monitor
+                await realtime_monitor.record_ai_reply(
+                    customer_id=context.customer_id,
+                    customer_name=context.customer.name if context.customer else None,
+                    platform=context.platform_name,
+                    user_message=context.message_data.get("content", ""),
+                    ai_reply=ai_reply
+                )
+            except Exception as e:
+                logger.warning(f"Failed to record AI reply to realtime monitor: {e}")
+            
             # 发送回复到平台
             message_type = context.message_data.get("message_type", MessageType.MESSAGE)
             sender_id = context.message_data.get("sender_id")

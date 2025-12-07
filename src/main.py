@@ -47,6 +47,10 @@ app.include_router(telegram_router)
 from src.statistics.api import router as statistics_router
 app.include_router(statistics_router)
 
+# 注册实时监控API路由
+from src.monitoring.api import router as monitoring_router
+app.include_router(monitoring_router)
+
 
 @app.on_event("startup")
 async def startup_event():

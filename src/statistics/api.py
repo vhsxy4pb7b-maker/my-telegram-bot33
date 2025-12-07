@@ -201,3 +201,171 @@ async def get_statistics_summary(
         return {"success": False, "error": str(e)}
 
 
+@router.get("/ai-replies")
+async def get_ai_replies(
+    limit: int = Query(50, description="返回的记录数量，默认50"),
+    offset: int = Query(0, description="偏移量，用于分页"),
+    start_date: Optional[str] = Query(None, description="开始日期，格式：YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="结束日期，格式：YYYY-MM-DD"),
+    db: Session = Depends(get_db)
+):
+    """
+    获取AI回复记录
+    
+    返回所有AI回复的内容、时间、客户信息等
+    """
+    try:
+        from src.database.models import Conversation, Customer
+        from sqlalchemy import and_
+        
+        # 构建查询
+        query = db.query(Conversation)\
+            .join(Customer, Conversation.customer_id == Customer.id)\
+            .filter(Conversation.ai_replied == True)\
+            .filter(Conversation.ai_reply_content.isnot(None))
+        
+        # 日期过滤
+        if start_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                query = query.filter(Conversation.ai_reply_at >= datetime.combine(start, datetime.min.time()))
+            except ValueError:
+                return {"error": "开始日期格式错误，请使用 YYYY-MM-DD 格式"}
+        
+        if end_date:
+            try:
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                query = query.filter(Conversation.ai_reply_at <= datetime.combine(end, datetime.max.time()))
+            except ValueError:
+                return {"error": "结束日期格式错误，请使用 YYYY-MM-DD 格式"}
+        
+        # 获取总数
+        total = query.count()
+        
+        # 分页查询
+        conversations = query\
+            .order_by(Conversation.ai_reply_at.desc())\
+            .offset(offset)\
+            .limit(limit)\
+            .all()
+        
+        # 格式化结果
+        results = []
+        for conv in conversations:
+            results.append({
+                "id": conv.id,
+                "conversation_id": conv.id,
+                "customer_id": conv.customer_id,
+                "customer_name": conv.customer.name if conv.customer else None,
+                "platform": conv.platform.value if conv.platform else None,
+                "message_type": conv.message_type.value if conv.message_type else None,
+                "user_message": conv.content[:200] if conv.content else None,  # 用户消息（前200字符）
+                "ai_reply": conv.ai_reply_content,
+                "ai_reply_at": conv.ai_reply_at.isoformat() if conv.ai_reply_at else None,
+                "received_at": conv.received_at.isoformat() if conv.received_at else None,
+            })
+        
+        return {
+            "success": True,
+            "data": results,
+            "pagination": {
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "has_more": (offset + limit) < total
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"Error getting AI replies: {str(e)}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/ai-replies/count")
+async def get_ai_replies_count(
+    start_date: Optional[str] = Query(None, description="开始日期，格式：YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="结束日期，格式：YYYY-MM-DD"),
+    db: Session = Depends(get_db)
+):
+    """
+    获取AI回复数量统计
+    
+    返回指定日期范围内的AI回复总数和每日统计
+    """
+    try:
+        from src.database.models import Conversation
+        from datetime import timedelta
+        from sqlalchemy import func, cast, Date
+        
+        # 构建查询
+        query = db.query(Conversation)\
+            .filter(Conversation.ai_replied == True)\
+            .filter(Conversation.ai_reply_content.isnot(None))
+        
+        # 日期过滤
+        if start_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                query = query.filter(Conversation.ai_reply_at >= datetime.combine(start, datetime.min.time()))
+            except ValueError:
+                return {"error": "开始日期格式错误，请使用 YYYY-MM-DD 格式"}
+        
+        if end_date:
+            try:
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                query = query.filter(Conversation.ai_reply_at <= datetime.combine(end, datetime.max.time()))
+            except ValueError:
+                return {"error": "结束日期格式错误，请使用 YYYY-MM-DD 格式"}
+        
+        # 如果没有指定日期，默认今天
+        if not start_date and not end_date:
+            today = date.today()
+            query = query.filter(
+                Conversation.ai_reply_at >= datetime.combine(today, datetime.min.time()),
+                Conversation.ai_reply_at < datetime.combine(today + timedelta(days=1), datetime.min.time())
+            )
+        
+        total_count = query.count()
+        
+        # 按日期分组统计
+        daily_query = db.query(
+            cast(Conversation.ai_reply_at, Date).label('date'),
+            func.count(Conversation.id).label('count')
+        )\
+        .filter(Conversation.ai_replied == True)\
+        .filter(Conversation.ai_reply_content.isnot(None))
+        
+        if start_date:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            daily_query = daily_query.filter(Conversation.ai_reply_at >= datetime.combine(start, datetime.min.time()))
+        
+        if end_date:
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            daily_query = daily_query.filter(Conversation.ai_reply_at <= datetime.combine(end, datetime.max.time()))
+        
+        daily_counts = daily_query\
+            .group_by(cast(Conversation.ai_reply_at, Date))\
+            .order_by(cast(Conversation.ai_reply_at, Date).desc())\
+            .all()
+        
+        daily_stats = [
+            {
+                "date": str(row.date),
+                "count": row.count
+            }
+            for row in daily_counts
+        ]
+        
+        return {
+            "success": True,
+            "data": {
+                "total_count": total_count,
+                "daily_breakdown": daily_stats
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"Error getting AI replies count: {str(e)}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
