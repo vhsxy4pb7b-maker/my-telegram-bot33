@@ -22,6 +22,9 @@ async def verify_webhook(
     
     Facebook 在订阅 Webhook 时会调用此端点进行验证
     """
+    # 记录验证请求的详细信息
+    logger.info(f"Webhook verification request: mode={hub_mode}, token={hub_verify_token[:10]}..., challenge={hub_challenge[:20] if hub_challenge else 'None'}...")
+    
     client = FacebookAPIClient()
     try:
         challenge = await client.verify_webhook(
@@ -34,8 +37,13 @@ async def verify_webhook(
             logger.info("Webhook verified successfully")
             return Response(content=challenge, media_type="text/plain")
         else:
-            logger.warning("Webhook verification failed")
+            logger.warning(f"Webhook verification failed: mode={hub_mode}, token_match=False")
             raise HTTPException(status_code=403, detail="Verification failed")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error during webhook verification: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
     finally:
         await client.close()
 
