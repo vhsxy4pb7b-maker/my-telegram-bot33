@@ -3,11 +3,7 @@ import urllib.parse
 import sys
 
 
-def generate_url(
-    app_id, 
-    redirect_uri="http://localhost:8000/oauth/callback", 
-    scope="pages_messaging,pages_read_engagement,pages_manage_metadata,pages_manage_posts,ads_read,ads_management"
-):
+def generate_url(app_id, redirect_uri="http://localhost:8000/oauth/callback", scope="pages_messaging,pages_manage_metadata"):
     """生成 OAuth 授权 URL"""
     base_url = "https://www.facebook.com/v18.0/dialog/oauth"
 
@@ -42,27 +38,8 @@ if __name__ == "__main__":
         "重定向 URI [http://localhost:8000/oauth/callback]: ").strip()
     if not redirect_uri:
         redirect_uri = "http://localhost:8000/oauth/callback"
-    
-    print("\n权限范围选项:")
-    print("1. 基础权限（消息功能）")
-    print("2. 基础 + 帖子管理")
-    print("3. 基础 + 广告管理")
-    print("4. 全部权限（推荐）")
-    
-    choice = input("\n请选择 [1-4，默认4]: ").strip()
-    
-    if choice == "1":
-        scope = "pages_messaging,pages_read_engagement,pages_manage_metadata"
-    elif choice == "2":
-        scope = "pages_messaging,pages_read_engagement,pages_manage_metadata,pages_manage_posts"
-    elif choice == "3":
-        scope = "pages_messaging,pages_read_engagement,pages_manage_metadata,ads_read,ads_management"
-    else:
-        scope = "pages_messaging,pages_read_engagement,pages_manage_metadata,pages_manage_posts,ads_read,ads_management"
-    
-    print(f"\n使用的权限范围: {scope}")
 
-    auth_url = generate_url(app_id, redirect_uri, scope)
+    auth_url = generate_url(app_id, redirect_uri)
 
     print("\n" + "=" * 60)
     print("生成的授权 URL:")

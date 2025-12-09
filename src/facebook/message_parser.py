@@ -1,13 +1,14 @@
 """Facebook 消息解析器"""
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
+from datetime import datetime
 from src.database.models import MessageType
-from src.platforms.base import PlatformParser
 
 
-class FacebookMessageParser(PlatformParser):
+class FacebookMessageParser:
     """解析 Facebook Webhook 消息"""
     
-    def parse_webhook_event(self, event: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+    @staticmethod
+    def parse_webhook_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         解析 Webhook 事件
         
@@ -30,7 +31,7 @@ class FacebookMessageParser(PlatformParser):
             # 处理消息事件
             messaging_events = entry.get("messaging", [])
             for messaging_event in messaging_events:
-                message_data = self._parse_messaging_event(
+                message_data = FacebookMessageParser._parse_messaging_event(
                     messaging_event, entry.get("id")
                 )
                 if message_data:
@@ -40,7 +41,7 @@ class FacebookMessageParser(PlatformParser):
             comment_events = entry.get("changes", [])
             for change in comment_events:
                 if change.get("field") == "feed":
-                    comment_data = self._parse_comment_event(
+                    comment_data = FacebookMessageParser._parse_comment_event(
                         change, entry.get("id")
                     )
                     if comment_data:
@@ -48,10 +49,10 @@ class FacebookMessageParser(PlatformParser):
         
         return parsed_messages if parsed_messages else None
     
+    @staticmethod
     def _parse_messaging_event(
-        self,
         event: Dict[str, Any],
-        page_id: Optional[str] = None
+        page_id: Optional[str]
     ) -> Optional[Dict[str, Any]]:
         """解析私信事件"""
         sender = event.get("sender", {})
@@ -72,10 +73,10 @@ class FacebookMessageParser(PlatformParser):
             "raw_data": event
         }
     
+    @staticmethod
     def _parse_comment_event(
-        self,
         change: Dict[str, Any],
-        page_id: Optional[str] = None
+        page_id: Optional[str]
     ) -> Optional[Dict[str, Any]]:
         """解析评论事件"""
         value = change.get("value", {})
@@ -102,7 +103,8 @@ class FacebookMessageParser(PlatformParser):
             "raw_data": change
         }
     
-    def parse_ad_event(self, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    @staticmethod
+    def parse_ad_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """解析广告相关事件"""
         # 广告事件通常通过不同的 Webhook 端点接收
         # 这里提供一个基础解析框架
@@ -118,7 +120,8 @@ class FacebookMessageParser(PlatformParser):
             "raw_data": event
         }
     
-    def extract_user_info(self, event: Dict[str, Any]) -> Dict[str, Any]:
+    @staticmethod
+    def extract_user_info(event: Dict[str, Any]) -> Dict[str, Any]:
         """从事件中提取用户信息"""
         sender = event.get("sender", {})
         from_user = event.get("from", {})

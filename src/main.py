@@ -4,19 +4,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from src.database.database import get_db, engine, Base
 from src.facebook.webhook_handler import router as facebook_router
-from src.instagram.webhook_handler import router as instagram_router
 from src.telegram.bot_handler import router as telegram_router
 from src.config import settings
 import logging
-import asyncio
-from typing import Dict, Any, List
+from typing import Dict, Any
 
-# 导入平台注册模块（确保平台被注册）
-import src.facebook.register  # noqa: F401
-import src.instagram.register  # noqa: F401
+# 尝试导入Instagram模块（可选）
+try:
+    from src.instagram.webhook_handler import router as instagram_router
+    INSTAGRAM_AVAILABLE = True
+except (ImportError, ModuleNotFoundError):
+    INSTAGRAM_AVAILABLE = False
+    # 创建模拟router以避免导入错误
+    from fastapi import APIRouter
+    instagram_router = APIRouter()
 
 # 配置日志（使用本地时区）
-import time
 from datetime import datetime, timezone, timedelta
 
 class LocalTimeFormatter(logging.Formatter):
@@ -65,7 +68,8 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(facebook_router)  # Facebook Webhook (兼容路由: /webhook)
-app.include_router(instagram_router)  # Instagram Webhook (/instagram/webhook)
+if INSTAGRAM_AVAILABLE:
+    app.include_router(instagram_router)  # Instagram Webhook (/instagram/webhook)
 app.include_router(telegram_router)
 
 # 注册统计API路由
@@ -123,9 +127,12 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"Database table creation skipped (may already exist): {str(e)}")
     
-    # 列出已注册的平台
-    from src.platforms.registry import registry
-    logger.info(f"Registered platforms: {registry.list_platforms()}")
+    # 列出已注册的平台（如果可用）
+    try:
+        from src.platforms.registry import registry
+        logger.info(f"Registered platforms: {registry.list_platforms()}")
+    except (ImportError, AttributeError):
+        logger.info("Platform registry not available")
 
 
 @app.on_event("shutdown")
@@ -137,12 +144,17 @@ async def shutdown_event():
 @app.get("/")
 async def root() -> Dict[str, Any]:
     """根路径"""
-    from src.platforms.registry import registry
+    try:
+        from src.platforms.registry import registry
+        platforms = registry.list_platforms()
+    except (ImportError, AttributeError):
+        platforms = ["facebook"]  # 默认平台
+    
     return {
         "message": "多平台客服自动化系统",
         "version": "2.0.0",
         "status": "running",
-        "supported_platforms": registry.list_platforms()
+        "supported_platforms": platforms
     }
 
 

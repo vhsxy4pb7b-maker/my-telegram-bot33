@@ -1,11 +1,11 @@
-# 多平台客服自动化系统
+# Facebook 客服自动化系统
 
-一个完整的从多平台社交媒体（Facebook、Instagram等）到 Telegram Bot 的自动化客服系统，支持 AI 自动回复、资料收集、智能过滤和人工审核。
+一个完整的从 Facebook 到 Telegram Bot 的自动化客服系统，支持 AI 自动回复、资料收集、智能过滤和人工审核。
 
 ## 系统架构
 
 ```
-多平台社交媒体（Facebook、Instagram等）
+Facebook（广告 & 私信 & 评论）
       ↓ 自动回复
 AI 智能客服（ManyChat / Botcake）
       ↓ 自动收集资料 + 自动过滤
@@ -16,18 +16,13 @@ Telegram Bot（团队的内部系统）
 
 ## 功能特性
 
-- ✅ **多平台支持**: 支持 Facebook、Instagram 等平台（模块化架构，易于扩展）
 - ✅ **Facebook 消息接收**: 支持广告、私信、评论等多种消息类型
-- ✅ **Facebook 帖子管理**: 支持发布、删除帖子，获取帖子信息
-- ✅ **Facebook 广告管理**: 支持广告账户、广告、广告系列、广告组的完整管理（ads_management）
-- ✅ **Instagram 私信接收**: 支持 Instagram Direct Messages
 - ✅ **AI 自动回复**: 集成 OpenAI API，智能生成回复
 - ✅ **资料自动收集**: 自动提取客户信息（姓名、邮箱、电话等）
 - ✅ **智能过滤**: 关键词过滤、情感分析、优先级判断
 - ✅ **Telegram 通知**: 自动发送审核通知到团队 Telegram
 - ✅ **人工审核**: 支持通过 Telegram Bot 进行审核操作
 - ✅ **第三方集成**: 支持 ManyChat 和 Botcake 集成
-- ✅ **模块化架构**: 统一的平台抽象层，便于接入新平台
 
 ## 技术栈
 
@@ -36,7 +31,7 @@ Telegram Bot（团队的内部系统）
 - **ORM**: SQLAlchemy
 - **数据库迁移**: Alembic
 - **AI 服务**: OpenAI API
-- **消息平台**: Facebook Graph API, Instagram Graph API, Telegram Bot API
+- **消息平台**: Facebook Graph API, Telegram Bot API
 - **第三方集成**: ManyChat API, Botcake API
 
 ## 快速开始
@@ -65,7 +60,6 @@ cp .env.example .env
 
 - `DATABASE_URL`: PostgreSQL 数据库连接字符串
 - `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `FACEBOOK_ACCESS_TOKEN`: Facebook API 配置
-- `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_VERIFY_TOKEN`, `INSTAGRAM_USER_ID`: Instagram API 配置（可选，未设置则使用Facebook配置）
 - `OPENAI_API_KEY`: OpenAI API 密钥
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`: Telegram Bot 配置
 - 其他可选配置（ManyChat, Botcake 等）
