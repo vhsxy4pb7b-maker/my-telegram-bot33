@@ -66,13 +66,13 @@ cp .env.example .env
 
 ### 4. 配置业务规则
 
-复制 `config.yaml.example` 为 `config.yaml` 并自定义配置：
+复制 `config/config.yaml.example` 为 `config/config.yaml` 并自定义配置：
 
 ```bash
-cp config.yaml.example config.yaml
+cp config/config.yaml.example config/config.yaml
 ```
 
-在 `config.yaml` 中配置：
+在 `config/config.yaml` 中配置：
 - 自动回复模板
 - 资料收集字段
 - 过滤规则
@@ -124,6 +124,34 @@ uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
+## 📚 项目文档
+
+项目文档已整理到 `docs/` 目录，按类别分类：
+
+- **[文档索引](docs/README.md)** - 查看所有文档的完整索引
+- **部署文档** - 查看 [docs/deployment/](docs/deployment/) 了解部署指南
+- **功能指南** - 查看 [docs/guides/](docs/guides/) 了解功能使用方法
+- **架构文档** - 查看 [docs/architecture/](docs/architecture/) 了解系统架构
+
+## 🛠️ 工具脚本
+
+项目提供了多个工具脚本，位于 `scripts/` 目录：
+
+### 环境设置脚本 (scripts/setup/)
+- `activate_venv.ps1` - 激活虚拟环境（Windows PowerShell）
+
+### 工具脚本 (scripts/tools/)
+- `check_facebook_permissions.py` - 检查 Facebook 权限
+- `exchange_token.py` - 交换 Token
+
+### 部署脚本 (scripts/deployment/)
+- `deploy.bat` - Windows 部署脚本
+- `deploy.sh` - Linux/Mac 部署脚本
+
+### 备份脚本 (scripts/backup/)
+- `backup_db.ps1` - Windows 数据库备份脚本
+- `backup_db.sh` - Linux/Mac 数据库备份脚本
+
 ## 项目结构
 
 ```
@@ -157,10 +185,22 @@ project/
 │   └── main_processor.py  # 消息处理流程
 ├── alembic/               # 数据库迁移
 ├── tests/                 # 测试文件
-├── requirements.txt       # Python 依赖
-├── .env.example          # 环境变量示例
-├── config.yaml.example   # 配置文件示例
-└── README.md             # 项目文档
+├── config/               # 配置文件目录
+│   ├── config.yaml.example   # 配置文件示例
+│   └── ...
+├── docs/                 # 文档目录
+│   ├── deployment/       # 部署文档
+│   ├── guides/          # 功能指南
+│   ├── architecture/    # 架构文档
+│   └── reports/         # 报告文档
+├── scripts/              # 脚本目录
+│   ├── setup/          # 环境设置脚本
+│   ├── tools/          # 工具脚本
+│   └── deployment/     # 部署脚本
+├── data/                # 数据文件目录
+├── requirements.txt     # Python 依赖
+├── .env.example         # 环境变量示例
+└── README.md            # 项目文档
 ```
 
 ## 数据流程
@@ -184,7 +224,7 @@ project/
 
 ### 自定义过滤规则
 
-在 `config.yaml` 中配置：
+在 `config/config.yaml` 中配置：
 
 ```yaml
 filtering:

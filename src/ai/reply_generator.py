@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional
 from src.config import settings
 from src.ai.prompt_templates import PromptTemplates
 from src.ai.conversation_manager import ConversationManager
+from src.utils.exceptions import APIError, ProcessingError
 from sqlalchemy.orm import Session
 import logging
 
@@ -81,10 +82,18 @@ class ReplyGenerator:
             
             return reply
         
+        except openai.APIError as e:
+            logger.error(f"OpenAI API error: {str(e)}", exc_info=True)
+            raise APIError(
+                message=f"AI回复生成失败: {str(e)}",
+                api_name="OpenAI",
+                status_code=getattr(e, 'status_code', None)
+            )
         except Exception as e:
             logger.error(f"Error generating reply: {str(e)}", exc_info=True)
-            # 返回默认回复
-            return self.templates.get_fallback()
+            raise ProcessingError(
+                f"生成回复时发生错误: {str(e)}"
+            )
     
     def generate_greeting(self) -> str:
         """生成问候语"""

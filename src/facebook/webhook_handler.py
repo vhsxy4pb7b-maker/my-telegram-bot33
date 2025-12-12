@@ -24,38 +24,44 @@ async def verify_webhook(
     
     如果缺少必需参数，返回友好的提示信息
     """
-    # 检查是否缺少必需参数
-    if hub_mode is None or hub_verify_token is None or hub_challenge is None:
-        logger.info("Webhook endpoint accessed without required parameters")
-        return Response(
-            content="Facebook Webhook 验证端点\n\n此端点需要以下查询参数：\n- hub.mode\n- hub.verify_token\n- hub.challenge\n\nFacebook 在验证 Webhook 时会自动发送这些参数。\n\n测试 URL 示例：\n/webhook?hub.mode=subscribe&hub.verify_token=YOUR_TOKEN&hub.challenge=test123",
-            media_type="text/plain; charset=utf-8"
-        )
-    
-    # 记录验证请求的详细信息
-    logger.info(f"Webhook verification request: mode={hub_mode}, token={hub_verify_token[:10]}..., challenge={hub_challenge[:20] if hub_challenge else 'None'}...")
-    
-    client = FacebookAPIClient()
     try:
-        challenge = await client.verify_webhook(
-            hub_mode,
-            hub_verify_token,
-            hub_challenge
-        )
+        # 检查是否缺少必需参数
+        if hub_mode is None or hub_verify_token is None or hub_challenge is None:
+            logger.info("Webhook endpoint accessed without required parameters")
+            return Response(
+                content="Facebook Webhook 验证端点\n\n此端点需要以下查询参数：\n- hub.mode\n- hub.verify_token\n- hub.challenge\n\nFacebook 在验证 Webhook 时会自动发送这些参数。\n\n测试 URL 示例：\n/webhook?hub.mode=subscribe&hub.verify_token=YOUR_TOKEN&hub.challenge=test123",
+                media_type="text/plain; charset=utf-8"
+            )
         
-        if challenge:
+        # 记录验证请求的详细信息（安全地处理可能为 None 的值）
+        try:
+            token_preview = hub_verify_token[:10] + "..." if hub_verify_token and len(hub_verify_token) > 10 else (hub_verify_token or "None")
+            challenge_preview = hub_challenge[:20] + "..." if hub_challenge and len(hub_challenge) > 20 else (hub_challenge or "None")
+            logger.info(f"Webhook verification request: mode={hub_mode}, token={token_preview}, challenge={challenge_preview}")
+        except Exception as e:
+            logger.warning(f"Error logging verification request: {e}")
+        
+        # 获取配置的 verify token
+        try:
+            expected_token = settings.facebook_verify_token
+        except Exception as e:
+            logger.error(f"Error accessing settings.facebook_verify_token: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Configuration error: {str(e)}")
+        
+        # 检查 mode 和 token
+        if hub_mode == "subscribe" and hub_verify_token == expected_token:
             logger.info("Webhook verified successfully")
-            return Response(content=challenge, media_type="text/plain")
+            return Response(content=hub_challenge, media_type="text/plain")
         else:
-            logger.warning(f"Webhook verification failed: mode={hub_mode}, token_match=False")
+            token_match = hub_verify_token == expected_token if hub_verify_token else False
+            logger.warning(f"Webhook verification failed: mode={hub_mode}, token_match={token_match}")
             raise HTTPException(status_code=403, detail="Verification failed")
+            
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error during webhook verification: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-    finally:
-        await client.close()
 
 
 @router.post("")

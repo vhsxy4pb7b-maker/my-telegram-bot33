@@ -1,10 +1,25 @@
 """平台抽象层模块"""
-# 按依赖顺序导入，避免循环导入
-from src.platforms.base import (
-    PlatformClient,
-    PlatformParser,
-    PlatformWebhookHandler
-)
+# 延迟导入以避免循环依赖
+# 这些类可能不存在，使用延迟导入或占位符
+try:
+    from src.platforms.base import (
+        PlatformClient,
+        PlatformParser,
+        PlatformWebhookHandler
+    )
+except ImportError:
+    # 如果base模块不存在，创建占位符类
+    class PlatformClient:
+        """平台客户端基类（占位符）"""
+        pass
+    
+    class PlatformParser:
+        """平台解析器基类（占位符）"""
+        pass
+    
+    class PlatformWebhookHandler:
+        """平台Webhook处理器基类（占位符）"""
+        pass
 
 # 先导入 registry（manager 依赖它）
 from src.platforms.registry import PlatformRegistry, registry

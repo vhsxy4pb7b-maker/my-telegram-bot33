@@ -53,12 +53,12 @@ async def test_config_loading():
         
         # 测试YAML配置加载
         try:
-            config_path = project_root / "config.yaml"
+            config_path = project_root / "config" / "config.yaml"
             if config_path.exists():
                 load_yaml_config(str(config_path))
                 log_test("配置加载 - YAML文件", "PASS", "YAML配置文件加载成功")
             else:
-                log_test("配置加载 - YAML文件", "SKIP", "config.yaml 文件不存在")
+                log_test("配置加载 - YAML文件", "SKIP", "config/config.yaml 文件不存在")
         except Exception as e:
             log_test("配置加载 - YAML文件", "FAIL", f"YAML配置加载失败: {str(e)}", e)
             

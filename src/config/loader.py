@@ -4,7 +4,7 @@ from typing import Dict, Any
 import yaml
 
 
-def load_yaml_config(config_path: str = "config.yaml") -> Dict[str, Any]:
+def load_yaml_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
     """加载 YAML 配置文件
     
     Args:

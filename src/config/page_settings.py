@@ -7,7 +7,7 @@ import os
 class PageSettings:
     """页面设置管理器"""
     
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str = "config/config.yaml"):
         """
         初始化页面设置管理器
         
