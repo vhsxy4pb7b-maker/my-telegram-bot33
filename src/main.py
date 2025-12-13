@@ -1,4 +1,7 @@
 """FastAPI 主应用入口"""
+from src.admin.api import router as admin_router
+from src.monitoring.api import router as monitoring_router
+from src.statistics.api import router as statistics_router
 from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -25,13 +28,15 @@ except (ImportError, ModuleNotFoundError):
 # 配置日志（使用本地时区）
 from datetime import datetime, timezone, timedelta
 
+
 class LocalTimeFormatter(logging.Formatter):
     """使用本地时区（UTC+8）的日志格式化器"""
+
     def __init__(self, fmt=None, datefmt=None):
         super().__init__(fmt, datefmt)
         # 设置本地时区（UTC+8，中国时区）
         self.local_tz = timezone(timedelta(hours=8))
-    
+
     def formatTime(self, record, datefmt=None):
         """格式化时间为本地时区"""
         ct = datetime.fromtimestamp(record.created, tz=self.local_tz)
@@ -40,6 +45,7 @@ class LocalTimeFormatter(logging.Formatter):
         else:
             s = ct.strftime('%Y-%m-%d %H:%M:%S')
         return s
+
 
 # 配置日志
 # 创建logs目录
@@ -91,20 +97,21 @@ cors_origins = getattr(settings, 'cors_origins', None)
 if cors_origins:
     # 如果配置了CORS_ORIGINS环境变量，使用配置的值（逗号分隔）
     if isinstance(cors_origins, str):
-        allowed_origins = [origin.strip() for origin in cors_origins.split(',')]
+        allowed_origins = [origin.strip()
+                           for origin in cors_origins.split(',')]
     else:
         allowed_origins = cors_origins
+else:
+    # 开发环境默认允许所有来源，生产环境应配置CORS_ORIGINS
+    if settings.debug:
+        allowed_origins = ["*"]
+        logger.info("CORS允许所有来源 (*)，仅用于开发环境")
     else:
-        # 开发环境默认允许所有来源，生产环境应配置CORS_ORIGINS
-        if settings.debug:
-            allowed_origins = ["*"]
-            logger.warning("CORS允许所有来源 (*)，仅用于开发环境")
-        else:
-            # 生产环境：如果未配置CORS_ORIGINS，默认不允许任何来源（更安全）
-            # 对于纯Webhook服务（无前端界面），可以不配置CORS
-            # 如果有前端管理界面，需要配置CORS_ORIGINS
-            allowed_origins = []
-            logger.info(
+        # 生产环境：如果未配置CORS_ORIGINS，默认不允许任何来源（更安全）
+        # 对于纯Webhook服务（无前端界面），可以不配置CORS
+        # 如果有前端管理界面，需要配置CORS_ORIGINS
+        allowed_origins = []
+        logger.info(
                 "生产环境未配置CORS_ORIGINS，将拒绝所有跨域请求。"
                 "如果只有Webhook服务（无前端界面），可以忽略此提示。"
                 "如果有前端管理界面，请通过环境变量CORS_ORIGINS配置允许的域名（逗号分隔）。"
@@ -127,19 +134,17 @@ app.add_middleware(
 # 注册路由
 app.include_router(facebook_router)  # Facebook Webhook (兼容路由: /webhook)
 if INSTAGRAM_AVAILABLE:
-    app.include_router(instagram_router)  # Instagram Webhook (/instagram/webhook)
+    # Instagram Webhook (/instagram/webhook)
+    app.include_router(instagram_router)
 app.include_router(telegram_router)
 
 # 注册统计API路由
-from src.statistics.api import router as statistics_router
 app.include_router(statistics_router)
 
 # 注册实时监控API路由
-from src.monitoring.api import router as monitoring_router
 app.include_router(monitoring_router)
 
 # 注册管理后台API路由
-from src.admin.api import router as admin_router
 app.include_router(admin_router)
 
 # 临时注释掉全局异常处理器，以便查看 FastAPI 的默认错误信息
@@ -198,10 +203,10 @@ app.include_router(admin_router)
 async def startup_event():
     """应用启动时执行"""
     logger.info("Starting Multi-Platform Customer Service Automation System...")
-    
+
     # 初始化平台管理器
     from src.platforms.manager import platform_manager
-    
+
     # 初始化Facebook平台
     platform_manager.initialize_platform(
         platform_name="facebook",
@@ -209,12 +214,14 @@ async def startup_event():
         verify_token=settings.facebook_verify_token
     )
     platform_manager.enable_platform("facebook")
-    
+
     # 初始化Instagram平台（如果配置了）
-    instagram_token = getattr(settings, 'instagram_access_token', None) or settings.facebook_access_token
-    instagram_verify = getattr(settings, 'instagram_verify_token', None) or settings.facebook_verify_token
+    instagram_token = getattr(
+        settings, 'instagram_access_token', None) or settings.facebook_access_token
+    instagram_verify = getattr(
+        settings, 'instagram_verify_token', None) or settings.facebook_verify_token
     instagram_user_id = getattr(settings, 'instagram_user_id', None)
-    
+
     if instagram_token:
         try:
             # Instagram需要base_url参数
@@ -226,12 +233,15 @@ async def startup_event():
             )
             platform_manager.enable_platform("instagram")
             if instagram_user_id:
-                logger.info(f"Instagram platform initialized (User ID: {instagram_user_id})")
+                logger.info(
+                    f"Instagram platform initialized (User ID: {instagram_user_id})")
             else:
-                logger.warning("Instagram platform initialized but INSTAGRAM_USER_ID not configured - sending messages will fail")
+                logger.warning(
+                    "Instagram platform initialized but INSTAGRAM_USER_ID not configured - sending messages will fail")
         except Exception as e:
-            logger.error(f"Failed to initialize Instagram platform: {str(e)}", exc_info=True)
-    
+            logger.error(
+                f"Failed to initialize Instagram platform: {str(e)}", exc_info=True)
+
     # 创建数据库表（如果不存在）
     # 注意：在生产环境建议使用 Alembic 迁移
     # 确保所有模型都被导入
@@ -242,43 +252,47 @@ async def startup_event():
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created/verified")
     except Exception as e:
-        logger.warning(f"Database table creation skipped (may already exist): {str(e)}")
-    
+        logger.warning(
+            f"Database table creation skipped (may already exist): {str(e)}")
+
     # 列出已注册的平台（如果可用）
     try:
         from src.platforms.registry import registry
         logger.info(f"Registered platforms: {registry.list_platforms()}")
     except (ImportError, AttributeError):
         logger.info("Platform registry not available")
-    
+
     # Start summary notification scheduler
     try:
         from src.telegram.summary_scheduler import SummaryScheduler
-        
+
         # Get database session
         db = next(get_db())
         summary_scheduler = SummaryScheduler(db)
         summary_scheduler.start()
-        
+
         # Store scheduler in app state for shutdown
         app.state.summary_scheduler = summary_scheduler
-        
+
         logger.info("Summary notification scheduler started")
     except Exception as e:
-        logger.warning(f"Failed to start summary notification scheduler: {str(e)}")
+        logger.warning(
+            f"Failed to start summary notification scheduler: {str(e)}")
         # Does not affect application startup
-    
+
     # Start auto-reply scheduler (scanning for unreplied product messages every 5 minutes)
     try:
         from src.auto_reply.auto_reply_scheduler import auto_reply_scheduler
         await auto_reply_scheduler.start()
-        
+
         # Store scheduler in app state for shutdown
         app.state.auto_reply_scheduler = auto_reply_scheduler
-        
-        logger.info("Auto-reply scheduler started (scanning for unreplied product messages every 5 minutes)")
+
+        logger.info(
+            "Auto-reply scheduler started (scanning for unreplied product messages every 5 minutes)")
     except Exception as e:
-        logger.warning(f"Failed to start auto-reply scheduler: {str(e)}", exc_info=True)
+        logger.warning(
+            f"Failed to start auto-reply scheduler: {str(e)}", exc_info=True)
         # Does not affect application startup
 
 
@@ -286,7 +300,7 @@ async def startup_event():
 async def shutdown_event():
     """应用关闭时执行"""
     logger.info("Shutting down...")
-    
+
     # Stop summary notification scheduler
     if hasattr(app.state, 'summary_scheduler'):
         try:
@@ -294,8 +308,9 @@ async def shutdown_event():
             await scheduler.close()
             logger.info("Summary notification scheduler stopped")
         except Exception as e:
-            logger.warning(f"Failed to stop summary notification scheduler: {str(e)}")
-    
+            logger.warning(
+                f"Failed to stop summary notification scheduler: {str(e)}")
+
     # Stop auto-reply scheduler
     if hasattr(app.state, 'auto_reply_scheduler'):
         try:
@@ -314,7 +329,7 @@ async def root() -> Dict[str, Any]:
         platforms = registry.list_platforms()
     except (ImportError, AttributeError):
         platforms = ["facebook"]  # 默认平台
-    
+
     return {
         "message": "多平台客服自动化系统",
         "version": "2.0.0",
@@ -357,10 +372,12 @@ async def test_webhook_config() -> Dict[str, Any]:
             "traceback": traceback.format_exc()
         }
 
+
 @app.get("/test/simple", tags=["testing"])
 async def test_simple():
     """最简单的测试端点"""
     return {"status": "ok", "message": "Simple test endpoint works"}
+
 
 @app.get("/test/settings", tags=["testing"])
 async def test_settings():
@@ -384,8 +401,6 @@ async def test_settings():
         )
 
 
-
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
@@ -394,4 +409,3 @@ if __name__ == "__main__":
         port=settings.port,
         reload=settings.debug
     )
-
