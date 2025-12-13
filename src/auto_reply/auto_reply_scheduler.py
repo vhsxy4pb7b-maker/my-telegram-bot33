@@ -322,6 +322,11 @@ class AutoReplyScheduler:
                         logger.error(f"Failed to send message to {sender_id}: {str(e)}", exc_info=True)
                         stats["error_count"] += 1
                         continue
+                
+                except Exception as e:
+                    logger.error(f"Failed to process unreplied message: {str(e)}", exc_info=True)
+                    stats["error_count"] += 1
+                    continue
             
             await page_client.close()
             

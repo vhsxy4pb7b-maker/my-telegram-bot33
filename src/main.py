@@ -94,16 +94,21 @@ if cors_origins:
         allowed_origins = [origin.strip() for origin in cors_origins.split(',')]
     else:
         allowed_origins = cors_origins
-else:
-    # 开发环境默认允许所有来源，生产环境应配置CORS_ORIGINS
-    if settings.debug:
-        allowed_origins = ["*"]
-        logger.warning("CORS允许所有来源 (*)，仅用于开发环境")
     else:
-        # 生产环境：如果未配置CORS_ORIGINS，默认不允许任何来源（更安全）
-        # 为了安全，生产环境必须配置CORS_ORIGINS
-        allowed_origins = []
-        logger.warning("生产环境未配置CORS_ORIGINS，将拒绝所有跨域请求。请通过环境变量CORS_ORIGINS配置允许的域名（逗号分隔）。")
+        # 开发环境默认允许所有来源，生产环境应配置CORS_ORIGINS
+        if settings.debug:
+            allowed_origins = ["*"]
+            logger.warning("CORS允许所有来源 (*)，仅用于开发环境")
+        else:
+            # 生产环境：如果未配置CORS_ORIGINS，默认不允许任何来源（更安全）
+            # 对于纯Webhook服务（无前端界面），可以不配置CORS
+            # 如果有前端管理界面，需要配置CORS_ORIGINS
+            allowed_origins = []
+            logger.info(
+                "生产环境未配置CORS_ORIGINS，将拒绝所有跨域请求。"
+                "如果只有Webhook服务（无前端界面），可以忽略此提示。"
+                "如果有前端管理界面，请通过环境变量CORS_ORIGINS配置允许的域名（逗号分隔）。"
+            )
 
 app.add_middleware(
     CORSMiddleware,
