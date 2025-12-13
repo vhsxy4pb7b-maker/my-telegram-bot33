@@ -113,41 +113,76 @@ class FilterHandler(BaseProcessor):
         return ["user_info_handler"]
 
     async def process(self, context: ProcessorContext) -> ProcessorResult:
-        """应用过滤规则"""
+        """应用过滤规则并保存对话记录"""
         try:
             from src.collector.filter_engine import FilterEngine
-            from src.database.models import Conversation
+            from src.ai.conversation_manager import ConversationManager
+            from src.database.models import Platform
 
-            filter_engine = FilterEngine(context.db)
+            # 保存对话记录到数据库
+            conversation_manager = ConversationManager(context.db)
             message_content = context.message_data.get("content", "")
             message_type = context.message_data.get(
                 "message_type", MessageType.MESSAGE)
-
-            # 创建临时对话对象用于过滤
-            temp_conversation = Conversation(
+            
+            # 保存对话记录
+            conversation = conversation_manager.save_conversation(
                 customer_id=context.customer_id,
                 platform_message_id=context.message_data.get("message_id"),
+                platform=context.platform_name,
                 message_type=message_type,
-                content=message_content
+                content=message_content,
+                raw_data=context.message_data.get("raw_data")
             )
+            
+            # 保存对话ID到上下文，供后续处理器使用
+            context.conversation_id = conversation.id
+            context.conversation = conversation
 
+            # 应用过滤规则
+            filter_engine = FilterEngine(context.db)
             filter_result = filter_engine.filter_message(
-                temp_conversation, message_content)
+                conversation, message_content)
             context.filter_result = filter_result
             context.should_review = filter_result.get("should_review", False)
 
-            # 如果被过滤且不需要审核，跳过后续处理
+            # 检查是否包含产品关键词（如果包含，即使被过滤也要回复）
+            message_lower = message_content.lower()
+            product_keywords = [
+                "iphone", "ip", "苹果", "apple", "loan", "borrow", "lend", "贷款", "借款", 
+                "借", "贷", "price", "cost", "费用", "价格", "多少钱", "interest", "利息",
+                "model", "型号", "容量", "storage", "apple id", "id card", "身份证",
+                "咨询", "了解", "询问", "办理", "申请", "apply", "怎么", "如何", "how",
+                "服务", "service", "客服", "customer service", "legit", "legitimate", 
+                "真实", "真的", "可靠", "reliable", "可信", "?", "？"
+            ]
+            has_product_keyword = any(keyword in message_lower for keyword in product_keywords)
+            
+            # 应用过滤结果到对话记录
+            conversation.filtered = filter_result.get("filtered", False)
+            conversation.filter_reason = filter_result.get("filter_reason")
+            conversation.priority = filter_result.get("priority")
+            context.db.commit()
+
+            # 如果被过滤且不需要审核，但包含产品关键词，仍然继续处理（确保产品相关消息被回复）
             if filter_result.get("filtered") and not filter_result.get("should_review"):
-                return ProcessorResult(
-                    status=ProcessorStatus.SKIP,
-                    message="消息已被过滤，跳过处理",
-                    should_continue=False
-                )
+                if has_product_keyword:
+                    logger.info(f"Message contains product keyword, will reply despite being filtered: {message_content[:50]}")
+                    # 重置过滤状态，确保消息被处理
+                    conversation.filtered = False
+                    conversation.filter_reason = None
+                    context.db.commit()
+                else:
+                    return ProcessorResult(
+                        status=ProcessorStatus.SKIP,
+                        message="消息已被过滤，跳过处理",
+                        should_continue=False
+                    )
 
             return ProcessorResult(
                 status=ProcessorStatus.SUCCESS,
                 message="过滤处理完成",
-                data={"filtered": filter_result.get("filtered", False)}
+                data={"filtered": filter_result.get("filtered", False), "conversation_id": conversation.id}
             )
         except Exception as e:
             logger.error(f"Error in filter handler: {str(e)}", exc_info=True)
@@ -159,7 +194,7 @@ class FilterHandler(BaseProcessor):
 
 
 class AIReplyHandler(BaseProcessor):
-    """AI回复处理器"""
+    """AI回复处理器 - 使用业务服务层处理业务逻辑"""
 
     def __init__(self):
         super().__init__("ai_reply_handler", "AI自动回复")
@@ -168,118 +203,69 @@ class AIReplyHandler(BaseProcessor):
         return ["filter_handler"]
 
     async def process(self, context: ProcessorContext) -> ProcessorResult:
-        """生成并发送AI回复"""
+        """生成并发送AI回复（通过业务服务层）"""
         try:
-            from src.config.page_settings import page_settings
-            from src.ai.reply_generator import ReplyGenerator
-            from src.statistics.tracker import StatisticsTracker
-
-            # 检查是否启用自动回复
-            page_id = context.message_data.get("page_id")
-            auto_reply_enabled = page_settings.is_auto_reply_enabled(page_id)
-
-            if not auto_reply_enabled:
-                logger.info(f"页面 {page_id or '未知'} 的自动回复已禁用")
+            # 从业务注册器获取AI自动回复服务
+            from src.business.registry import business_registry
+            auto_reply_service = business_registry.get("auto_reply")
+            
+            if not auto_reply_service:
+                logger.error("AI自动回复服务未注册")
                 return ProcessorResult(
-                    status=ProcessorStatus.SKIP,
-                    message="自动回复已禁用",
-                    should_continue=True  # 继续后续处理
-                )
-
-            # 生成AI回复
-            reply_generator = ReplyGenerator(context.db)
-            ai_reply = await reply_generator.generate_reply(
-                customer_id=context.customer_id,
-                message_content=context.message_data.get("content", ""),
-                customer_name=context.customer.name if context.customer else None
-            )
-
-            if not ai_reply:
-                return ProcessorResult(
-                    status=ProcessorStatus.SKIP,
-                    message="AI回复生成失败",
+                    status=ProcessorStatus.ERROR,
+                    message="AI自动回复服务未注册",
                     should_continue=True
                 )
-
+            
+            # 构建业务服务上下文
+            service_context = {
+                "db": context.db,
+                "customer_id": context.customer_id,
+                "customer": context.customer,
+                "message_data": context.message_data,
+                "platform_client": context.platform_client,
+                "message_summary": context.message_summary,
+                "platform_name": context.platform_name,
+                "conversation_id": getattr(context, "conversation_id", None)
+            }
+            
+            # 调用业务服务执行业务逻辑
+            result = await auto_reply_service.execute(service_context)
+            
+            # 处理业务服务返回结果
+            if result.get("skipped"):
+                return ProcessorResult(
+                    status=ProcessorStatus.SKIP,
+                    message=result.get("message", "已跳过"),
+                    should_continue=True
+                )
+            
+            if not result.get("success"):
+                return ProcessorResult(
+                    status=ProcessorStatus.ERROR,
+                    message=result.get("message", "AI回复处理失败"),
+                    should_continue=True  # 即使失败也继续后续处理
+                )
+            
+            # 更新上下文
+            ai_reply = result.get("ai_reply", "")
             context.ai_reply = ai_reply
             context.ai_replied = True
-
-            # 检查是否包含群组邀请
-            context.group_invitation_sent = "t.me" in ai_reply or "telegram" in ai_reply.lower()
-
-            # 记录高频问题
-            stats_tracker = StatisticsTracker(context.db)
-            if context.message_summary:
-                question_category = self._categorize_question(
-                    context.message_summary)
-                stats_tracker.record_frequent_question(
-                    question_text=context.message_summary,
-                    category=question_category,
-                    sample_response=ai_reply[:200]
-                )
-
-            # 实时监控：记录AI回复事件
-            try:
-                from src.monitoring.realtime import realtime_monitor
-                await realtime_monitor.record_ai_reply(
-                    customer_id=context.customer_id,
-                    customer_name=context.customer.name if context.customer else None,
-                    platform=context.platform_name,
-                    user_message=context.message_data.get("content", ""),
-                    ai_reply=ai_reply
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to record AI reply to realtime monitor: {e}")
-
-            # 发送回复到平台
-            message_type = context.message_data.get(
-                "message_type", MessageType.MESSAGE)
-            sender_id = context.message_data.get("sender_id")
-            page_id = context.message_data.get("page_id")
-
-            # 记录调试信息
-            logger.info(
-                f"Sending AI reply - sender_id={sender_id}, page_id={page_id}, message_type={message_type}")
-
-            if message_type == MessageType.MESSAGE:
-                await context.platform_client.send_message(
-                    recipient_id=sender_id,
-                    message=ai_reply,
-                    page_id=page_id  # 传递页面ID
-                )
-            elif message_type == MessageType.COMMENT and context.platform_name == "facebook":
-                from src.facebook.api_client import FacebookAPIClient
-                if isinstance(context.platform_client, FacebookAPIClient):
-                    post_id = context.message_data.get("post_id")
-                    if post_id:
-                        await context.platform_client.comment_on_post(post_id, ai_reply)
-
+            context.group_invitation_sent = result.get("group_invitation_sent", False)
+            
             return ProcessorResult(
                 status=ProcessorStatus.SUCCESS,
-                message="AI回复发送成功",
-                data={"ai_reply": ai_reply[:100]}
+                message=result.get("message", "AI回复发送成功"),
+                data={"ai_reply": ai_reply[:100] if ai_reply else ""}
             )
         except Exception as e:
             logger.error(f"Error in AI reply handler: {str(e)}", exc_info=True)
             return ProcessorResult(
                 status=ProcessorStatus.ERROR,
                 message=f"AI回复处理失败: {str(e)}",
-                error=e
+                error=e,
+                should_continue=True  # 即使出错也继续后续处理
             )
-
-    def _categorize_question(self, message: str) -> str:
-        """问题分类"""
-        message_lower = message.lower()
-        if any(word in message_lower for word in ["price", "cost", "how much", "多少钱", "价格"]):
-            return "价格咨询"
-        elif any(word in message_lower for word in ["interest", "rate", "利息", "利率"]):
-            return "利息咨询"
-        elif any(word in message_lower for word in ["how", "how to", "怎么", "如何"]):
-            return "流程咨询"
-        elif any(word in message_lower for word in ["model", "型号", "iphone"]):
-            return "产品咨询"
-        return None
 
 
 class DataCollectionHandler(BaseProcessor):

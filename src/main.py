@@ -1,5 +1,5 @@
 """FastAPI 主应用入口"""
-from fastapi import FastAPI, Depends, BackgroundTasks
+from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from src.database.database import get_db, engine, Base
@@ -67,6 +67,8 @@ file_handler.setFormatter(LocalTimeFormatter(
 ))
 
 # 配置根日志记录器
+# 优化：减少httpx库的详细日志（降低CPU使用）
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(
     level=logging.INFO,
     handlers=[console_handler, file_handler]
@@ -99,9 +101,9 @@ else:
         logger.warning("CORS允许所有来源 (*)，仅用于开发环境")
     else:
         # 生产环境：如果未配置CORS_ORIGINS，默认不允许任何来源（更安全）
-        # 但为了调试，临时允许所有来源
-        allowed_origins = ["*"]
-        logger.warning("生产环境未配置CORS_ORIGINS，临时允许所有来源以便调试。")
+        # 为了安全，生产环境必须配置CORS_ORIGINS
+        allowed_origins = []
+        logger.warning("生产环境未配置CORS_ORIGINS，将拒绝所有跨域请求。请通过环境变量CORS_ORIGINS配置允许的域名（逗号分隔）。")
 
 app.add_middleware(
     CORSMiddleware,
@@ -243,12 +245,60 @@ async def startup_event():
         logger.info(f"Registered platforms: {registry.list_platforms()}")
     except (ImportError, AttributeError):
         logger.info("Platform registry not available")
+    
+    # Start summary notification scheduler
+    try:
+        from src.telegram.summary_scheduler import SummaryScheduler
+        
+        # Get database session
+        db = next(get_db())
+        summary_scheduler = SummaryScheduler(db)
+        summary_scheduler.start()
+        
+        # Store scheduler in app state for shutdown
+        app.state.summary_scheduler = summary_scheduler
+        
+        logger.info("Summary notification scheduler started")
+    except Exception as e:
+        logger.warning(f"Failed to start summary notification scheduler: {str(e)}")
+        # Does not affect application startup
+    
+    # Start auto-reply scheduler (scanning for unreplied product messages every 5 minutes)
+    try:
+        from src.auto_reply.auto_reply_scheduler import auto_reply_scheduler
+        await auto_reply_scheduler.start()
+        
+        # Store scheduler in app state for shutdown
+        app.state.auto_reply_scheduler = auto_reply_scheduler
+        
+        logger.info("Auto-reply scheduler started (scanning for unreplied product messages every 5 minutes)")
+    except Exception as e:
+        logger.warning(f"Failed to start auto-reply scheduler: {str(e)}", exc_info=True)
+        # Does not affect application startup
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """应用关闭时执行"""
     logger.info("Shutting down...")
+    
+    # Stop summary notification scheduler
+    if hasattr(app.state, 'summary_scheduler'):
+        try:
+            scheduler = app.state.summary_scheduler
+            await scheduler.close()
+            logger.info("Summary notification scheduler stopped")
+        except Exception as e:
+            logger.warning(f"Failed to stop summary notification scheduler: {str(e)}")
+    
+    # Stop auto-reply scheduler
+    if hasattr(app.state, 'auto_reply_scheduler'):
+        try:
+            scheduler = app.state.auto_reply_scheduler
+            await scheduler.stop()
+            logger.info("Auto-reply scheduler stopped")
+        except Exception as e:
+            logger.warning(f"Failed to stop auto-reply scheduler: {str(e)}")
 
 
 @app.get("/")

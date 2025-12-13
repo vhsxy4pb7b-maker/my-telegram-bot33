@@ -10,31 +10,31 @@ class PromptTemplates:
         self.templates = yaml_config.get("ai_templates", {})
     
     def get_greeting(self) -> str:
-        """获取问候语模板"""
+        """Get greeting template"""
         return self.templates.get(
             "greeting",
-            "您好！感谢您的咨询，我是AI智能客服，很高兴为您服务。"
+            "Hello! Thank you for your inquiry. I'm an AI customer service assistant, happy to help you."
         )
     
     def get_collecting_info(self) -> str:
-        """获取收集信息提示"""
+        """Get information collection prompt"""
         return self.templates.get(
             "collecting_info",
-            "为了更好地帮助您，请提供以下信息：姓名、联系方式、具体需求。"
+            "To better assist you, please provide the following information: name, contact details, and specific needs."
         )
     
     def get_processing(self) -> str:
-        """获取处理中提示"""
+        """Get processing prompt"""
         return self.templates.get(
             "processing",
-            "正在为您处理，请稍候..."
+            "Processing your request, please wait..."
         )
     
     def get_fallback(self) -> str:
-        """获取默认回复"""
+        """Get fallback reply"""
         return self.templates.get(
             "fallback",
-            "抱歉，我没有完全理解您的问题。能否详细描述一下您的需求？"
+            "I didn't fully understand your question. Could you please describe your needs in more detail?"
         )
     
     def build_system_prompt(self, prompt_type: Optional[str] = None) -> str:
@@ -86,18 +86,18 @@ Please reply in the same language as the customer, maintaining politeness and pr
         customer_name: str = None,
         previous_messages: list = None
     ) -> str:
-        """构建对话上下文"""
+        """Build conversation context"""
         context = ""
         
         if customer_name:
-            context += f"客户姓名：{customer_name}\n"
+            context += f"Customer name: {customer_name}\n"
         
         if previous_messages:
-            context += "\n历史对话：\n"
-            for msg in previous_messages[-5:]:  # 只保留最近5条
-                role = "客户" if msg.get("role") == "user" else "客服"
+            context += "\nConversation history:\n"
+            for msg in previous_messages[-5:]:  # Keep only last 5 messages
+                role = "Customer" if msg.get("role") == "user" else "Assistant"
                 content = msg.get("content", "")
-                context += f"{role}：{content}\n"
+                context += f"{role}: {content}\n"
         
         return context
 

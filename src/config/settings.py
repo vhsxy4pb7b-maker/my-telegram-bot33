@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     
     # OpenAI
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
-    openai_model: str = Field("gpt-4", env="OPENAI_MODEL")
+    openai_model: str = Field("gpt-4o-mini", env="OPENAI_MODEL")
     openai_temperature: float = Field(0.7, env="OPENAI_TEMPERATURE")
     
     # Telegram
@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = Field(..., env="SECRET_KEY")
     algorithm: str = Field("HS256", env="ALGORITHM")
+    cors_origins: Optional[str] = Field(None, env="CORS_ORIGINS")  # 逗号分隔的允许来源列表
     
     @field_validator('facebook_access_token', 'facebook_app_id', 'facebook_app_secret')
     @classmethod

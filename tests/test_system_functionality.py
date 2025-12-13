@@ -10,6 +10,12 @@ from typing import Dict, Any, List
 from datetime import datetime
 import traceback
 
+# 设置UTF-8编码环境（Windows兼容）
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 # 添加项目根目录到路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -30,7 +36,8 @@ def log_test(name: str, status: str, message: str = "", error: Exception = None)
     }
     test_results.append(result)
     
-    status_symbol = "✅" if status == "PASS" else "❌" if status == "FAIL" else "⚠️"
+    # 使用纯文本标记替代emoji，避免Windows GBK编码问题
+    status_symbol = "[PASS]" if status == "PASS" else "[FAIL]" if status == "FAIL" else "[WARN]"
     print(f"{status_symbol} [{status}] {name}")
     if message:
         print(f"   {message}")
@@ -587,17 +594,17 @@ async def run_all_tests():
     warned = len([r for r in test_results if r["status"] == "WARN"])
     
     print(f"\n总计: {total} 个测试")
-    print(f"✅ 通过: {passed}")
-    print(f"❌ 失败: {failed}")
-    print(f"⚠️  警告: {warned}")
-    print(f"⏭️  跳过: {skipped}")
+    print(f"[PASS] 通过: {passed}")
+    print(f"[FAIL] 失败: {failed}")
+    print(f"[WARN] 警告: {warned}")
+    print(f"[SKIP] 跳过: {skipped}")
     print()
     
     if failed > 0:
         print("失败的测试:")
         for result in test_results:
             if result["status"] == "FAIL":
-                print(f"  ❌ {result['name']}: {result['message']}")
+                print(f"  [FAIL] {result['name']}: {result['message']}")
                 if result["error"]:
                     print(f"     错误: {result['error']}")
         print()
@@ -606,7 +613,7 @@ async def run_all_tests():
         print("警告的测试:")
         for result in test_results:
             if result["status"] == "WARN":
-                print(f"  ⚠️  {result['name']}: {result['message']}")
+                print(f"  [WARN] {result['name']}: {result['message']}")
         print()
     
     # 计算成功率
@@ -615,9 +622,9 @@ async def run_all_tests():
     print()
     
     if failed == 0:
-        print("🎉 所有关键测试通过！系统功能正常。")
+        print("[SUCCESS] 所有关键测试通过！系统功能正常。")
     else:
-        print("⚠️  部分测试失败，请检查上述错误信息。")
+        print("[WARNING] 部分测试失败，请检查上述错误信息。")
     
     return failed == 0
 

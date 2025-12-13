@@ -16,11 +16,23 @@ else:
     connect_args = {"options": "-c timezone=UTC"}
     poolclass = None
 
+# 数据库连接池配置（生产环境优化）
+pool_config = {}
+if "sqlite" not in settings.database_url:
+    # PostgreSQL连接池配置
+    pool_config = {
+        "pool_size": 10,  # 连接池大小
+        "max_overflow": 20,  # 最大溢出连接数
+        "pool_pre_ping": True,  # 连接前ping检查
+        "pool_recycle": 3600,  # 连接回收时间（秒）
+        "pool_timeout": 30,  # 获取连接超时时间（秒）
+    }
+
 engine = create_engine(
     settings.database_url,
     echo=settings.database_echo,
     poolclass=poolclass,
-    pool_pre_ping=True if "sqlite" not in settings.database_url else False,
+    **pool_config,
     connect_args=connect_args,
 )
 

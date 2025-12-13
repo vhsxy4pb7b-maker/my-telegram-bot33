@@ -59,6 +59,11 @@ class FacebookMessageParser:
         recipient = event.get("recipient", {})
         message = event.get("message", {})
         
+        # 检查是否是页面自己发送的消息（包括 Business Suite 回复）
+        # is_echo: true 表示是页面发送的消息，应该跳过
+        if message.get("is_echo", False):
+            return None
+        
         if not message or "text" not in message:
             return None
         
